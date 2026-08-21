@@ -127,6 +127,17 @@ country_debt = {}
 country_debt_updated = None
 
 
+def country_debt_monitor():
+
+    print("💰 Country debt monitor avviato")
+
+    while True:
+
+        load_country_debt()
+
+        time.sleep(86400)
+
+
 # =========================================================
 # EVENT STORAGE
 # =========================================================
@@ -2720,6 +2731,16 @@ def news_score(title):
 def load_news_events_once():
 
 
+    if not CURRENTS_API_KEY:
+
+        print(
+            "⚠️ CURRENTS_API_KEY non impostata: "
+            "news non disponibili"
+        )
+
+        return
+
+
     try:
 
         headers = {
@@ -2803,13 +2824,13 @@ def load_news_events_once():
             ).strip()
 
             if not title or not url:
-                return
+                continue
 
             if not is_relevant_news(
                 title
             ):
 
-                return
+                continue
 
             news_id = (
                 "NEWS-" +
@@ -2817,7 +2838,7 @@ def load_news_events_once():
             )
 
             if news_id in seen:
-                return
+                continue
 
             score = news_score(
                 title
@@ -3408,6 +3429,11 @@ def start_background_monitors():
         threading.Thread(
             target=country_macro_monitor,
             daemon=True
+        ),
+
+        threading.Thread(
+            target=country_debt_monitor,
+            daemon=True
         )
 
     ]
@@ -3436,6 +3462,11 @@ try:
 except Exception as error:
     print("❌ Initial country metadata bootstrap:", repr(error))
 
+try:
+    load_country_debt()
+except Exception as error:
+    print("❌ Initial country debt bootstrap:", repr(error))
+
 # Bootstrap event feeds once before starting their periodic loops.
 # This prevents /api/events from returning [] during the first page load.
 print("🚀 Initial event bootstrap...")
@@ -3456,24 +3487,6 @@ except Exception as error:
     print("❌ Initial news bootstrap:", repr(error))
 
 # Start the periodic/background monitors after the initial datasets exist.
-
-print("🚀 Initial event bootstrap...")
-
-try:
-    load_space_events()
-except Exception as error:
-    print("❌ Initial space bootstrap:", repr(error))
-
-try:
-    weather_monitor(once=True)
-except Exception as error:
-    print("❌ Initial weather bootstrap:", repr(error))
-
-try:
-    news_monitor(once=True)
-except Exception as error:
-    print("❌ Initial news bootstrap:", repr(error))
-
 
 start_background_monitors()
 
