@@ -1468,460 +1468,467 @@ def parse_iso_datetime(value):
         return None
 
 
-def space_monitor():
+def load_space_events_once():
 
-    print("🚀 Space monitor avviato")
 
-    while True:
+    try:
 
-        try:
+        response = requests.get(
+            SPACE_URL,
+            params={
+                "limit": 10,
+                "mode": "normal"
+            },
+            timeout=15
+        )
 
-            response = requests.get(
-                SPACE_URL,
-                params={
-                    "limit": 10,
-                    "mode": "normal"
-                },
-                timeout=15
+        if response.status_code == 429:
+
+            print(
+                "⚠️ Space API rate limit (429) - "
+                "riprovare tra 30 minuti"
             )
 
-            if response.status_code == 429:
+            time.sleep(1800)
 
-                print(
-                    "⚠️ Space API rate limit (429) - "
-                    "riprovare tra 30 minuti"
-                )
+            continue
 
-                time.sleep(1800)
+        response.raise_for_status()
 
+        data = response.json()
+
+        for launch in data.get(
+            "results",
+            []
+        ):
+
+            launch_id = (
+                "SPACE-" +
+                launch["id"]
+            )
+
+            if launch_id in seen:
                 continue
 
-            response.raise_for_status()
 
-            data = response.json()
+            # -----------------------------------------
+            # BASIC DATA
+            # -----------------------------------------
 
-            for launch in data.get(
-                "results",
-                []
+            name = launch.get(
+                "name"
+            ) or "Unnamed launch"
+
+            net_string = launch.get(
+                "net"
+            )
+
+            status_data = (
+                launch.get("status")
+                or {}
+            )
+
+            status = (
+                status_data.get("name")
+                or "Status unavailable"
+            )
+
+
+            # -----------------------------------------
+            # MISSION
+            # -----------------------------------------
+
+            mission = (
+                launch.get("mission")
+                or {}
+            )
+
+            if isinstance(
+                mission,
+                dict
             ):
 
-                launch_id = (
-                    "SPACE-" +
-                    launch["id"]
+                mission_name = (
+                    mission.get("name")
                 )
 
-                if launch_id in seen:
-                    continue
-
-
-                # -----------------------------------------
-                # BASIC DATA
-                # -----------------------------------------
-
-                name = launch.get(
-                    "name"
-                ) or "Unnamed launch"
-
-                net_string = launch.get(
-                    "net"
+                mission_description = (
+                    mission.get(
+                        "description"
+                    )
                 )
 
-                status_data = (
-                    launch.get("status")
+            else:
+
+                mission_name = None
+
+                mission_description = None
+
+
+            # -----------------------------------------
+            # LAUNCH PAD
+            # -----------------------------------------
+
+            pad = (
+                launch.get("pad")
+                or {}
+            )
+
+            if isinstance(
+                pad,
+                dict
+            ):
+
+                pad_name = (
+                    pad.get("name")
+                )
+
+                pad_latitude = (
+                    pad.get("latitude")
+                )
+
+                pad_longitude = (
+                    pad.get("longitude")
+                )
+
+                pad_location = (
+                    pad.get("location")
                     or {}
                 )
 
-                status = (
-                    status_data.get("name")
-                    or "Status unavailable"
-                )
+            else:
+
+                pad_name = None
+
+                pad_latitude = None
+
+                pad_longitude = None
+
+                pad_location = {}
 
 
-                # -----------------------------------------
-                # MISSION
-                # -----------------------------------------
+            # -----------------------------------------
+            # LOCATION
+            # -----------------------------------------
 
-                mission = (
-                    launch.get("mission")
-                    or {}
-                )
+            if isinstance(
+                pad_location,
+                dict
+            ):
 
-                if isinstance(
-                    mission,
-                    dict
-                ):
-
-                    mission_name = (
-                        mission.get("name")
-                    )
-
-                    mission_description = (
-                        mission.get(
-                            "description"
-                        )
-                    )
-
-                else:
-
-                    mission_name = None
-
-                    mission_description = None
-
-
-                # -----------------------------------------
-                # LAUNCH PAD
-                # -----------------------------------------
-
-                pad = (
-                    launch.get("pad")
-                    or {}
-                )
-
-                if isinstance(
-                    pad,
-                    dict
-                ):
-
-                    pad_name = (
-                        pad.get("name")
-                    )
-
-                    pad_latitude = (
-                        pad.get("latitude")
-                    )
-
-                    pad_longitude = (
-                        pad.get("longitude")
-                    )
-
-                    pad_location = (
-                        pad.get("location")
-                        or {}
-                    )
-
-                else:
-
-                    pad_name = None
-
-                    pad_latitude = None
-
-                    pad_longitude = None
-
-                    pad_location = {}
-
-
-                # -----------------------------------------
-                # LOCATION
-                # -----------------------------------------
-
-                if isinstance(
-                    pad_location,
-                    dict
-                ):
-
-                    location_name = (
-                        pad_location.get(
-                            "name"
-                        )
-                    )
-
-                else:
-
-                    location_name = None
-
-
-                # -----------------------------------------
-                # ROCKET
-                # -----------------------------------------
-
-                rocket = (
-                    launch.get("rocket")
-                    or {}
-                )
-
-                if isinstance(
-                    rocket,
-                    dict
-                ):
-
-                    rocket_configuration = (
-                        rocket.get(
-                            "configuration"
-                        )
-                        or {}
-                    )
-
-                else:
-
-                    rocket_configuration = {}
-
-
-                if not isinstance(
-                    rocket_configuration,
-                    dict
-                ):
-
-                    rocket_configuration = {}
-
-
-                rocket_name = (
-                    rocket_configuration.get(
-                        "full_name"
-                    )
-                    or
-                    rocket_configuration.get(
+                location_name = (
+                    pad_location.get(
                         "name"
                     )
                 )
 
+            else:
 
-                # -----------------------------------------
-                # LAUNCH SERVICE PROVIDER
-                # -----------------------------------------
+                location_name = None
 
-                provider = (
-                    launch.get(
-                        "launch_service_provider"
+
+            # -----------------------------------------
+            # ROCKET
+            # -----------------------------------------
+
+            rocket = (
+                launch.get("rocket")
+                or {}
+            )
+
+            if isinstance(
+                rocket,
+                dict
+            ):
+
+                rocket_configuration = (
+                    rocket.get(
+                        "configuration"
                     )
                     or {}
                 )
 
-                if isinstance(
-                    provider,
-                    dict
+            else:
+
+                rocket_configuration = {}
+
+
+            if not isinstance(
+                rocket_configuration,
+                dict
+            ):
+
+                rocket_configuration = {}
+
+
+            rocket_name = (
+                rocket_configuration.get(
+                    "full_name"
+                )
+                or
+                rocket_configuration.get(
+                    "name"
+                )
+            )
+
+
+            # -----------------------------------------
+            # LAUNCH SERVICE PROVIDER
+            # -----------------------------------------
+
+            provider = (
+                launch.get(
+                    "launch_service_provider"
+                )
+                or {}
+            )
+
+            if isinstance(
+                provider,
+                dict
+            ):
+
+                provider_name = (
+                    provider.get(
+                        "name"
+                    )
+                )
+
+            else:
+
+                provider_name = None
+
+
+            # -----------------------------------------
+            # LAUNCH TIME
+            # -----------------------------------------
+
+            launch_time = (
+                parse_iso_datetime(
+                    net_string
+                )
+            )
+
+
+            # -----------------------------------------
+            # LAUNCH TODAY - FUTURE ONLY
+            # -----------------------------------------
+
+            launch_today = False
+
+            if launch_time:
+
+                now = datetime.now(
+                    timezone.utc
+                )
+
+                launch_today = (
+                    launch_time.date() == now.date()
+                    and
+                    launch_time > now
+                )
+
+
+            # -----------------------------------------
+            # LAUNCH WINDOW
+            # -----------------------------------------
+
+            window_start = (
+                launch.get(
+                    "window_start"
+                )
+            )
+
+            window_end = (
+                launch.get(
+                    "window_end"
+                )
+            )
+
+
+            # -----------------------------------------
+            # SCORE
+            # -----------------------------------------
+
+            score = 30
+
+            if "in flight" in status.lower():
+
+                score = 90
+
+            elif launch_time:
+
+                now = datetime.now(
+                    timezone.utc
+                )
+
+                seconds_until = (
+                    launch_time - now
+                ).total_seconds()
+
+                # Entro un'ora
+                if (
+                    0 <
+                    seconds_until <=
+                    3600
                 ):
 
-                    provider_name = (
-                        provider.get(
-                            "name"
-                        )
-                    )
+                    score = 70
 
-                else:
-
-                    provider_name = None
-
-
-                # -----------------------------------------
-                # LAUNCH TIME
-                # -----------------------------------------
-
-                launch_time = (
-                    parse_iso_datetime(
-                        net_string
-                    )
-                )
-
-
-                # -----------------------------------------
-                # LAUNCH TODAY - FUTURE ONLY
-                # -----------------------------------------
-
-                launch_today = False
-
-                if launch_time:
-
-                    now = datetime.now(
-                        timezone.utc
-                    )
-
-                    launch_today = (
-                        launch_time.date() == now.date()
-                        and
-                        launch_time > now
-                    )
-
-
-                # -----------------------------------------
-                # LAUNCH WINDOW
-                # -----------------------------------------
-
-                window_start = (
-                    launch.get(
-                        "window_start"
-                    )
-                )
-
-                window_end = (
-                    launch.get(
-                        "window_end"
-                    )
-                )
-
-
-                # -----------------------------------------
-                # SCORE
-                # -----------------------------------------
-
-                score = 30
-
-                if "in flight" in status.lower():
-
-                    score = 90
-
-                elif launch_time:
-
-                    now = datetime.now(
-                        timezone.utc
-                    )
-
-                    seconds_until = (
-                        launch_time - now
-                    ).total_seconds()
-
-                    # Entro un'ora
-                    if (
-                        0 <
-                        seconds_until <=
-                        3600
-                    ):
-
-                        score = 70
-
-                    # Entro 24 ore
-                    elif (
-                        0 <
-                        seconds_until <=
-                        86400
-                    ):
-
-                        score = 50
-
-
-                # Un lancio di oggi è importante
-                if launch_today and score < 50:
+                # Entro 24 ore
+                elif (
+                    0 <
+                    seconds_until <=
+                    86400
+                ):
 
                     score = 50
 
 
-                # -----------------------------------------
-                # LEVEL
-                # -----------------------------------------
+            # Un lancio di oggi è importante
+            if launch_today and score < 50:
 
-                if score >= 90:
-
-                    level = "CRITICAL"
-
-                    emoji = "🚨"
-
-                elif score >= 70:
-
-                    level = "HIGH"
-
-                    emoji = "🔥"
-
-                elif launch_today:
-
-                    level = "HIGH"
-
-                    emoji = "🚀"
-
-                else:
-
-                    level = "NORMAL"
-
-                    emoji = "🚀"
+                score = 50
 
 
-                # -----------------------------------------
-                # EVENT
-                # -----------------------------------------
+            # -----------------------------------------
+            # LEVEL
+            # -----------------------------------------
 
-                event = {
+            if score >= 90:
 
-                    "id":
-                        launch_id,
+                level = "CRITICAL"
 
-                    "time":
-                        net_string,
+                emoji = "🚨"
 
-                    "type":
-                        "SPACE",
+            elif score >= 70:
 
-                    "title":
-                        name,
+                level = "HIGH"
 
-                    "status":
-                        status,
+                emoji = "🔥"
 
-                    "mission":
-                        mission_name,
+            elif launch_today:
 
-                    "description":
-                        mission_description,
+                level = "HIGH"
 
-                    "pad":
-                        pad_name,
+                emoji = "🚀"
 
-                    "location":
-                        location_name,
+            else:
 
-                    "pad_latitude":
-                        pad_latitude,
+                level = "NORMAL"
 
-                    "pad_longitude":
-                        pad_longitude,
-
-                    "rocket":
-                        rocket_name,
-
-                    "provider":
-                        provider_name,
-
-                    "launch_today":
-                        launch_today,
-
-                    "window_start":
-                        window_start,
-
-                    "window_end":
-                        window_end,
-
-                    "score":
-                        score,
-
-                    "level":
-                        level,
-
-                    "emoji":
-                        emoji
-                }
+                emoji = "🚀"
 
 
-                add_event(
-                    event
-                )
+            # -----------------------------------------
+            # EVENT
+            # -----------------------------------------
 
-                seen.add(
-                    launch_id
-                )
+            event = {
+
+                "id":
+                    launch_id,
+
+                "time":
+                    net_string,
+
+                "type":
+                    "SPACE",
+
+                "title":
+                    name,
+
+                "status":
+                    status,
+
+                "mission":
+                    mission_name,
+
+                "description":
+                    mission_description,
+
+                "pad":
+                    pad_name,
+
+                "location":
+                    location_name,
+
+                "pad_latitude":
+                    pad_latitude,
+
+                "pad_longitude":
+                    pad_longitude,
+
+                "rocket":
+                    rocket_name,
+
+                "provider":
+                    provider_name,
+
+                "launch_today":
+                    launch_today,
+
+                "window_start":
+                    window_start,
+
+                "window_end":
+                    window_end,
+
+                "score":
+                    score,
+
+                "level":
+                    level,
+
+                "emoji":
+                    emoji
+            }
 
 
-                if launch_today:
+            add_event(
+                event
+            )
 
-                    print(
-                        f"🚀 SPACE TODAY: "
-                        f"{name} | "
-                        f"{location_name or 'Location TBD'} | "
-                        f"{net_string}"
-                    )
-
-                else:
-
-                    print(
-                        f"{emoji} SPACE: "
-                        f"{name}"
-                    )
-
-        except Exception as error:
-
-            print(
-                "Errore spazio:",
-                error
+            seen.add(
+                launch_id
             )
 
 
-        # Space: ogni 30 minuti
+            if launch_today:
+
+                print(
+                    f"🚀 SPACE TODAY: "
+                    f"{name} | "
+                    f"{location_name or 'Location TBD'} | "
+                    f"{net_string}"
+                )
+
+            else:
+
+                print(
+                    f"{emoji} SPACE: "
+                    f"{name}"
+                )
+
+    except Exception as error:
+
+        print(
+            "Errore spazio:",
+            error
+        )
+
+
+    # Space: ogni 30 minuti
+
+
+def space_monitor():
+
+    print('🚀 Space monitor avviato')
+
+    while True:
+
+        load_space_events_once()
+
         time.sleep(1800)
 
 
@@ -2088,156 +2095,163 @@ def weather_score(
     return score
 
 
+def load_weather_events_once():
+
+
+    try:
+
+        for location in LOCATIONS:
+
+            params = {
+
+                "latitude":
+                    location["latitude"],
+
+                "longitude":
+                    location["longitude"],
+
+                "current":
+                    (
+                        "temperature_2m,"
+                        "wind_speed_10m,"
+                        "precipitation"
+                    ),
+
+                "timezone":
+                    "auto"
+            }
+
+            response = requests.get(
+                WEATHER_URL,
+                params=params,
+                timeout=10
+            )
+
+            response.raise_for_status()
+
+            data = response.json()
+
+            current = data["current"]
+
+            temperature = (
+                current["temperature_2m"]
+            )
+
+            wind = (
+                current["wind_speed_10m"]
+            )
+
+            precipitation = (
+                current["precipitation"]
+            )
+
+            score = weather_score(
+                temperature,
+                wind,
+                precipitation
+            )
+
+            if score < 40:
+                continue
+
+            event_id = (
+
+                f"WEATHER-"
+                f"{location['name']}-"
+                f"{temperature}-"
+                f"{wind}-"
+                f"{precipitation}"
+
+            )
+
+            if event_id in seen:
+                continue
+
+            if score >= 70:
+
+                level = "HIGH"
+                emoji = "🚨"
+
+            else:
+
+                level = "MEDIUM"
+                emoji = "⚠️"
+
+            event = {
+
+                "id": event_id,
+
+                "time":
+                    datetime.now(
+                        timezone.utc
+                    ).strftime(
+                        "%H:%M:%S UTC"
+                    ),
+
+                "type": "WEATHER",
+
+                "title":
+                    (
+                        "Extreme weather - "
+                        + location["name"]
+                    ),
+
+                "location":
+                    location["name"],
+
+                "latitude":
+                    location["latitude"],
+
+                "longitude":
+                    location["longitude"],
+
+                "temperature":
+                    temperature,
+
+                "wind":
+                    wind,
+
+                "precipitation":
+                    precipitation,
+
+                "score":
+                    score,
+
+                "level":
+                    level,
+
+                "emoji":
+                    emoji
+            }
+
+            add_event(event)
+
+            seen.add(event_id)
+
+            print(
+                f"{emoji} WEATHER: "
+                f"{location['name']} "
+                f"{temperature}°C "
+                f"wind={wind} km/h "
+                f"score={score}"
+            )
+
+    except Exception as error:
+
+        print(
+            "Errore meteo:",
+            error
+        )
+
+
+
 def weather_monitor():
 
-    print("🌦️ Weather monitor avviato")
+    print('🌦️ Weather monitor avviato')
 
     while True:
 
-        try:
-
-            for location in LOCATIONS:
-
-                params = {
-
-                    "latitude":
-                        location["latitude"],
-
-                    "longitude":
-                        location["longitude"],
-
-                    "current":
-                        (
-                            "temperature_2m,"
-                            "wind_speed_10m,"
-                            "precipitation"
-                        ),
-
-                    "timezone":
-                        "auto"
-                }
-
-                response = requests.get(
-                    WEATHER_URL,
-                    params=params,
-                    timeout=10
-                )
-
-                response.raise_for_status()
-
-                data = response.json()
-
-                current = data["current"]
-
-                temperature = (
-                    current["temperature_2m"]
-                )
-
-                wind = (
-                    current["wind_speed_10m"]
-                )
-
-                precipitation = (
-                    current["precipitation"]
-                )
-
-                score = weather_score(
-                    temperature,
-                    wind,
-                    precipitation
-                )
-
-                if score < 40:
-                    continue
-
-                event_id = (
-
-                    f"WEATHER-"
-                    f"{location['name']}-"
-                    f"{temperature}-"
-                    f"{wind}-"
-                    f"{precipitation}"
-
-                )
-
-                if event_id in seen:
-                    continue
-
-                if score >= 70:
-
-                    level = "HIGH"
-                    emoji = "🚨"
-
-                else:
-
-                    level = "MEDIUM"
-                    emoji = "⚠️"
-
-                event = {
-
-                    "id": event_id,
-
-                    "time":
-                        datetime.now(
-                            timezone.utc
-                        ).strftime(
-                            "%H:%M:%S UTC"
-                        ),
-
-                    "type": "WEATHER",
-
-                    "title":
-                        (
-                            "Extreme weather - "
-                            + location["name"]
-                        ),
-
-                    "location":
-                        location["name"],
-
-                    "latitude":
-                        location["latitude"],
-
-                    "longitude":
-                        location["longitude"],
-
-                    "temperature":
-                        temperature,
-
-                    "wind":
-                        wind,
-
-                    "precipitation":
-                        precipitation,
-
-                    "score":
-                        score,
-
-                    "level":
-                        level,
-
-                    "emoji":
-                        emoji
-                }
-
-                add_event(event)
-
-                seen.add(event_id)
-
-                print(
-                    f"{emoji} WEATHER: "
-                    f"{location['name']} "
-                    f"{temperature}°C "
-                    f"wind={wind} km/h "
-                    f"score={score}"
-                )
-
-        except Exception as error:
-
-            print(
-                "Errore meteo:",
-                error
-            )
+        load_weather_events_once()
 
         time.sleep(600)
 
@@ -2495,279 +2509,278 @@ def news_score(title):
     )
 
 
-def news_monitor():
+def load_news_events_once():
 
-    print("📰 News monitor avviato")
 
-    if not CURRENTS_API_KEY:
+    try:
 
-        print(
-            "⚠️ CURRENTS_API_KEY non impostata."
+        headers = {
+
+            "Authorization":
+                (
+                    "Bearer "
+                    +
+                    CURRENTS_API_KEY
+                )
+
+        }
+
+        params = {
+
+            "language":
+                "en",
+
+            "page_size":
+                20
+
+        }
+
+        response = requests.get(
+
+            CURRENTS_URL,
+
+            params=params,
+
+            headers=headers,
+
+            timeout=20
+
         )
 
-        return
+        if response.status_code == 429:
+
+            print(
+                "⚠️ Currents rate limit (429) - "
+                "riprovare tra 30 minuti"
+            )
+
+            time.sleep(1800)
+
+            continue
+
+        if response.status_code == 401:
+
+            print(
+                "❌ Currents API key "
+                "non valida o mancante"
+            )
+
+            time.sleep(1800)
+
+            continue
+
+        response.raise_for_status()
+
+        data = response.json()
+
+        articles = data.get(
+            "news",
+            []
+        )
+
+        accepted = 0
+
+        for article in articles:
+
+            title = (
+                article.get("title")
+                or
+                ""
+            ).strip()
+
+            url = (
+                article.get("url")
+                or
+                ""
+            ).strip()
+
+            if not title or not url:
+                continue
+
+            if not is_relevant_news(
+                title
+            ):
+
+                continue
+
+            news_id = (
+                "NEWS-" +
+                url
+            )
+
+            if news_id in seen:
+                continue
+
+            score = news_score(
+                title
+            )
+
+            if score >= 80:
+
+                level = "CRITICAL"
+                emoji = "🚨"
+
+            elif score >= 60:
+
+                level = "HIGH"
+                emoji = "🔥"
+
+            elif score >= 50:
+
+                level = "MEDIUM"
+                emoji = "⚠️"
+
+            else:
+
+                level = "NORMAL"
+                emoji = "📰"
+
+            event_type = (
+                get_news_event_type(
+                    title
+                )
+            )
+
+            source = (
+
+                article.get(
+                    "source"
+                )
+
+                or
+
+                article.get(
+                    "author"
+                )
+
+                or
+
+                "News"
+
+            )
+
+            published = (
+                article.get(
+                    "published"
+                )
+            )
+
+            news_time = (
+                datetime.now(
+                    timezone.utc
+                ).strftime(
+                    "%H:%M:%S UTC"
+                )
+            )
+
+            if published:
+
+                try:
+
+                    parsed = (
+                        datetime.fromisoformat(
+                            published.replace(
+                                "Z",
+                                "+00:00"
+                            )
+                        )
+                    )
+
+                    news_time = (
+                        parsed.astimezone(
+                            timezone.utc
+                        ).strftime(
+                            "%H:%M:%S UTC"
+                        )
+                    )
+
+                except Exception:
+
+                    pass
+
+            clean_title = title
+
+            if event_type:
+                prefix = f"[{event_type}]"
+                if clean_title.upper().startswith(prefix):
+                    clean_title = clean_title[len(prefix):].strip(" -:|")
+
+            event = {
+
+                "id":
+                    news_id,
+
+                "time":
+                    news_time,
+
+                "type":
+                    "NEWS",
+
+                "title":
+                    clean_title,
+
+                "source":
+                    source,
+
+                "author":
+                    source,
+
+                "url":
+                    url,
+
+                "category":
+                    event_type,
+
+                "score":
+                    score,
+
+                "level":
+                    level,
+
+                "emoji":
+                    emoji
+
+            }
+
+            add_event(
+                event
+            )
+
+            seen.add(
+                news_id
+            )
+
+            accepted += 1
+
+            print(
+
+                f"{emoji} NEWS: "
+                f"[{event_type}] "
+                f"{title} "
+                f"[{source}]"
+
+            )
+
+            if accepted >= 5:
+
+                break
+
+    except Exception as error:
+
+        print(
+            "Errore news:",
+            error
+        )
+
+
+
+def news_monitor():
+
+    print('📰 News monitor avviato')
 
     while True:
 
-        try:
-
-            headers = {
-
-                "Authorization":
-                    (
-                        "Bearer "
-                        +
-                        CURRENTS_API_KEY
-                    )
-
-            }
-
-            params = {
-
-                "language":
-                    "en",
-
-                "page_size":
-                    20
-
-            }
-
-            response = requests.get(
-
-                CURRENTS_URL,
-
-                params=params,
-
-                headers=headers,
-
-                timeout=20
-
-            )
-
-            if response.status_code == 429:
-
-                print(
-                    "⚠️ Currents rate limit (429) - "
-                    "riprovare tra 30 minuti"
-                )
-
-                time.sleep(1800)
-
-                continue
-
-            if response.status_code == 401:
-
-                print(
-                    "❌ Currents API key "
-                    "non valida o mancante"
-                )
-
-                time.sleep(1800)
-
-                continue
-
-            response.raise_for_status()
-
-            data = response.json()
-
-            articles = data.get(
-                "news",
-                []
-            )
-
-            accepted = 0
-
-            for article in articles:
-
-                title = (
-                    article.get("title")
-                    or
-                    ""
-                ).strip()
-
-                url = (
-                    article.get("url")
-                    or
-                    ""
-                ).strip()
-
-                if not title or not url:
-                    continue
-
-                if not is_relevant_news(
-                    title
-                ):
-
-                    continue
-
-                news_id = (
-                    "NEWS-" +
-                    url
-                )
-
-                if news_id in seen:
-                    continue
-
-                score = news_score(
-                    title
-                )
-
-                if score >= 80:
-
-                    level = "CRITICAL"
-                    emoji = "🚨"
-
-                elif score >= 60:
-
-                    level = "HIGH"
-                    emoji = "🔥"
-
-                elif score >= 50:
-
-                    level = "MEDIUM"
-                    emoji = "⚠️"
-
-                else:
-
-                    level = "NORMAL"
-                    emoji = "📰"
-
-                event_type = (
-                    get_news_event_type(
-                        title
-                    )
-                )
-
-                source = (
-
-                    article.get(
-                        "source"
-                    )
-
-                    or
-
-                    article.get(
-                        "author"
-                    )
-
-                    or
-
-                    "News"
-
-                )
-
-                published = (
-                    article.get(
-                        "published"
-                    )
-                )
-
-                news_time = (
-                    datetime.now(
-                        timezone.utc
-                    ).strftime(
-                        "%H:%M:%S UTC"
-                    )
-                )
-
-                if published:
-
-                    try:
-
-                        parsed = (
-                            datetime.fromisoformat(
-                                published.replace(
-                                    "Z",
-                                    "+00:00"
-                                )
-                            )
-                        )
-
-                        news_time = (
-                            parsed.astimezone(
-                                timezone.utc
-                            ).strftime(
-                                "%H:%M:%S UTC"
-                            )
-                        )
-
-                    except Exception:
-
-                        pass
-
-                clean_title = title
-
-                if event_type:
-                    prefix = f"[{event_type}]"
-                    if clean_title.upper().startswith(prefix):
-                        clean_title = clean_title[len(prefix):].strip(" -:|")
-
-                event = {
-
-                    "id":
-                        news_id,
-
-                    "time":
-                        news_time,
-
-                    "type":
-                        "NEWS",
-
-                    "title":
-                        clean_title,
-
-                    "source":
-                        source,
-
-                    "author":
-                        source,
-
-                    "url":
-                        url,
-
-                    "category":
-                        event_type,
-
-                    "score":
-                        score,
-
-                    "level":
-                        level,
-
-                    "emoji":
-                        emoji
-
-                }
-
-                add_event(
-                    event
-                )
-
-                seen.add(
-                    news_id
-                )
-
-                accepted += 1
-
-                print(
-
-                    f"{emoji} NEWS: "
-                    f"[{event_type}] "
-                    f"{title} "
-                    f"[{source}]"
-
-                )
-
-                if accepted >= 5:
-
-                    break
-
-        except Exception as error:
-
-            print(
-                "Errore news:",
-                error
-            )
+        load_news_events_once()
 
         time.sleep(420)
 
@@ -3210,6 +3223,25 @@ try:
     load_country_metadata()
 except Exception as error:
     print("❌ Initial country metadata bootstrap:", repr(error))
+
+# Bootstrap event feeds once before starting their periodic loops.
+# This prevents /api/events from returning [] during the first page load.
+print("🚀 Initial event bootstrap...")
+
+try:
+    load_space_events_once()
+except Exception as error:
+    print("❌ Initial space bootstrap:", repr(error))
+
+try:
+    load_weather_events_once()
+except Exception as error:
+    print("❌ Initial weather bootstrap:", repr(error))
+
+try:
+    load_news_events_once()
+except Exception as error:
+    print("❌ Initial news bootstrap:", repr(error))
 
 # Start the periodic/background monitors after the initial datasets exist.
 start_background_monitors()
