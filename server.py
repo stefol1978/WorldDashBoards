@@ -5,7 +5,29 @@ import time
 import os
 from datetime import datetime, timezone
 
+try:
+    import config
+except ImportError:
+    class config:
+        DEBUG_EVENT_LOGS = False
+        DEBUG_API = False
+        DEBUG_MACRO = False
+        DEBUG_NEWS = False
+
 app = Flask(__name__)
+
+# Render/Gunicorn: keep application logs (print statements) but
+# suppress Gunicorn's per-request access log:
+#   127.0.0.1 - - "GET /api/events ..."
+import logging
+
+def disable_gunicorn_access_log():
+    logger = logging.getLogger("gunicorn.access")
+    logger.disabled = True
+    logger.propagate = False
+    logger.handlers.clear()
+
+disable_gunicorn_access_log()
 
 # Paths are resolved from server.py so deployment does not depend
 # on the process working directory.
@@ -144,6 +166,13 @@ def country_debt_monitor():
 
 events = []
 seen = set()
+
+
+def event_debug(message):
+    if getattr(config, "DEBUG_EVENT_LOGS", False):
+        print(message)
+
+
 
 
 def add_event(event):
@@ -1432,17 +1461,11 @@ def earthquake_monitor(once=False):
 
                 if first_run:
 
-                    print(
-                        f"🌍 Loaded earthquake: "
-                        f"M{magnitude} - {place}"
-                    )
+                    event_debug(f"🌍 Loaded earthquake: M{magnitude} - {place}")
 
                 else:
 
-                    print(
-                        f"{emoji} NEW EARTHQUAKE: "
-                        f"M{magnitude} - {place}"
-                    )
+                    event_debug(f"{emoji} NEW EARTHQUAKE: M{magnitude} - {place}")
 
             first_run = False
 
@@ -1911,12 +1934,7 @@ def load_space_events_once():
 
             if launch_today:
 
-                print(
-                    f"🚀 SPACE TODAY: "
-                    f"{name} | "
-                    f"{location_name or 'Location TBD'} | "
-                    f"{net_string}"
-                )
+                event_debug(f"🚀 SPACE TODAY: {name} | {location_name or 'Location TBD'} | {net_string}")
 
             else:
 
@@ -2128,7 +2146,7 @@ def load_space_events():
                     f"{net_string}"
                 )
             else:
-                print(f"{emoji} SPACE: {name}")
+                event_debug(f"{emoji} SPACE: {name}")
 
         print(f"🚀 Loaded space events: {loaded}")
 
@@ -2447,13 +2465,7 @@ def load_weather_events_once():
 
             seen.add(event_id)
 
-            print(
-                f"{emoji} WEATHER: "
-                f"{location['name']} "
-                f"{temperature}°C "
-                f"wind={wind} km/h "
-                f"score={score}"
-            )
+            event_debug(f"{emoji} WEATHER: {location['name']} {temperature}°C wind={wind} km/h score={score}")
 
     except Exception as error:
 
@@ -2762,9 +2774,8 @@ def load_news_events_once():
             timeout=20
         )
 
-        print(
-            f"📰 Currents API HTTP: {response.status_code}"
-        )
+        if getattr(config, "DEBUG_NEWS", False):
+            print(f"📰 Currents API HTTP: {response.status_code}")
 
         if response.status_code == 429:
 
@@ -2787,7 +2798,10 @@ def load_news_events_once():
 
         data = response.json()
 
-        articles = data.get("news", [])
+        articles = data.get("news", []) or []
+
+        if getattr(config, "DEBUG_NEWS", False):
+            print(f"📰 Currents returned {len(articles)} articles")
 
         loaded = 0
 
@@ -2878,9 +2892,7 @@ def load_news_events_once():
             seen.add(news_id)
             loaded += 1
 
-            print(
-                f"{emoji} NEWS: {title} [{source}]"
-            )
+            event_debug(f"{emoji} NEWS: {title} [{source}]")
 
             # Keep the event stream compact; the UI can show the details
             # when the user clicks an item.
@@ -3147,6 +3159,13 @@ def get_countries():
 
             "public_debt":
                 public_debt,
+
+            "public_debt_billions":
+                (
+                    round(public_debt / 1_000_000_000, 3)
+                    if public_debt is not None
+                    else None
+                ),
 
             "public_debt_year":
                 (
