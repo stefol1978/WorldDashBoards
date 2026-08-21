@@ -2734,7 +2734,6 @@ def news_score(title):
 
 def load_news_events_once():
 
-
     if not CURRENTS_API_KEY:
 
         print(
@@ -2744,63 +2743,43 @@ def load_news_events_once():
 
         return
 
-
     try:
 
-        loaded = 0
-
         headers = {
-
             "Authorization":
-                (
-                    "Bearer "
-                    +
-                    CURRENTS_API_KEY
-                )
-
+                "Bearer " + CURRENTS_API_KEY
         }
 
         params = {
-
-            "language":
-                "en",
-
-            "page_size":
-                20
-
+            "language": "en",
+            "page_size": 20
         }
 
         response = requests.get(
-
             CURRENTS_URL,
-
             params=params,
-
             headers=headers,
-
             timeout=20
+        )
 
+        print(
+            f"📰 Currents API HTTP: {response.status_code}"
         )
 
         if response.status_code == 429:
 
             print(
                 "⚠️ Currents rate limit (429) - "
-                "riprovare tra 30 minuti"
+                "riprovare più tardi"
             )
-
-            time.sleep(1800)
 
             return
 
         if response.status_code == 401:
 
             print(
-                "❌ Currents API key "
-                "non valida o mancante"
+                "❌ Currents API key non valida o mancante"
             )
-
-            time.sleep(1800)
 
             return
 
@@ -2808,199 +2787,109 @@ def load_news_events_once():
 
         data = response.json()
 
-        articles = data.get(
-            "news",
-            []
-        )
+        articles = data.get("news", [])
 
-        accepted = 0
+        loaded = 0
 
         for article in articles:
 
             title = (
-                article.get("title")
-                or
-                ""
+                article.get("title") or ""
             ).strip()
 
             url = (
-                article.get("url")
-                or
-                ""
+                article.get("url") or ""
             ).strip()
 
             if not title or not url:
                 continue
 
-            if not is_relevant_news(
-                title
-            ):
-
-                continue
-
-            news_id = (
-                "NEWS-" +
-                url
-            )
+            news_id = "NEWS-" + url
 
             if news_id in seen:
                 continue
 
-            score = news_score(
-                title
-            )
+            # General news feed: no disaster/conflict keyword filter.
+            # The category remains optional metadata for the UI.
+            event_type = get_news_event_type(title)
+            score = news_score(title) if event_type else 40
 
             if score >= 80:
-
                 level = "CRITICAL"
                 emoji = "🚨"
-
             elif score >= 60:
-
                 level = "HIGH"
                 emoji = "🔥"
-
             elif score >= 50:
-
                 level = "MEDIUM"
                 emoji = "⚠️"
-
             else:
-
                 level = "NORMAL"
                 emoji = "📰"
 
-            event_type = (
-                get_news_event_type(
-                    title
-                )
-            )
-
             source = (
-
-                article.get(
-                    "source"
-                )
-
-                or
-
-                article.get(
-                    "author"
-                )
-
-                or
-
-                "News"
-
+                article.get("source")
+                or article.get("author")
+                or "News"
             )
 
-            published = (
-                article.get(
-                    "published"
-                )
-            )
-
-            news_time = (
-                datetime.now(
-                    timezone.utc
-                ).strftime(
-                    "%H:%M:%S UTC"
-                )
-            )
+            published = article.get("published")
+            news_time = datetime.now(
+                timezone.utc
+            ).strftime("%H:%M:%S UTC")
 
             if published:
-
                 try:
-
-                    parsed = (
-                        datetime.fromisoformat(
-                            published.replace(
-                                "Z",
-                                "+00:00"
-                            )
-                        )
+                    parsed = datetime.fromisoformat(
+                        published.replace("Z", "+00:00")
                     )
-
-                    news_time = (
-                        parsed.astimezone(
-                            timezone.utc
-                        ).strftime(
-                            "%H:%M:%S UTC"
-                        )
-                    )
-
+                    news_time = parsed.astimezone(
+                        timezone.utc
+                    ).strftime("%H:%M:%S UTC")
                 except Exception:
-
                     pass
 
-            clean_title = title
-
-            if event_type:
-                prefix = f"[{event_type}]"
-                if clean_title.upper().startswith(prefix):
-                    clean_title = clean_title[len(prefix):].strip(" -:|")
-
             event = {
-
-                "id":
-                    news_id,
-
-                "time":
-                    news_time,
-
-                "type":
-                    "NEWS",
-
-                "title":
-                    clean_title,
-
-                "source":
-                    source,
-
-                "author":
-                    source,
-
-                "url":
-                    url,
-
-                "category":
-                    event_type,
-
-                "score":
-                    score,
-
-                "level":
-                    level,
-
-                "emoji":
-                    emoji
-
+                "id": news_id,
+                "time": news_time,
+                "type": "NEWS",
+                "title": title,
+                "source": source,
+                "author": article.get("author") or source,
+                "url": url,
+                "description": (
+                    article.get("description")
+                    or article.get("snippet")
+                    or ""
+                ),
+                "image": (
+                    article.get("image")
+                    or article.get("image_url")
+                    or None
+                ),
+                "published": published,
+                "category": event_type or "NEWS",
+                "score": score,
+                "level": level,
+                "emoji": emoji
             }
 
-            add_event(
-                event
-            )
-
-            seen.add(
-                news_id
-            )
-
-            accepted += 1
+            add_event(event)
+            seen.add(news_id)
+            loaded += 1
 
             print(
-
-                f"{emoji} NEWS: "
-                f"[{event_type}] "
-                f"{title} "
-                f"[{source}]"
-
+                f"{emoji} NEWS: {title} [{source}]"
             )
 
-            if accepted >= 5:
-
+            # Keep the event stream compact; the UI can show the details
+            # when the user clicks an item.
+            if loaded >= 10:
                 break
 
-        print(f"📰 Loaded news: {loaded}")
+        print(
+            f"📰 Loaded news: {loaded}"
+        )
 
     except Exception as error:
 
@@ -3008,7 +2897,6 @@ def load_news_events_once():
             "Errore news:",
             error
         )
-
 
 
 def news_monitor(once=False):
@@ -3469,6 +3357,11 @@ try:
     load_country_metadata()
 except Exception as error:
     print("❌ Initial country metadata bootstrap:", repr(error))
+
+try:
+    load_country_macro()
+except Exception as error:
+    print("❌ Initial country macro bootstrap:", repr(error))
 
 try:
     load_country_debt()
