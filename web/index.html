@@ -4424,6 +4424,29 @@ async function loadWorldPopulation() {
             await response.json();
 
 
+        // Il monitor World Bank parte in background sul server.
+        // Se la pagina arriva prima del caricamento del dato,
+        // NON trasformiamo null in 0: riproviamo dopo pochi secondi.
+        if (
+            data.population === null ||
+            data.population === undefined ||
+            data.population === ""
+        ) {
+
+            console.log(
+                "🌍 World population not ready, retry in 3s"
+            );
+
+            setTimeout(
+                loadWorldPopulation,
+                3000
+            );
+
+            return;
+
+        }
+
+
         worldPopulation =
             Number(
                 data.population
@@ -4432,6 +4455,7 @@ async function loadWorldPopulation() {
 
         worldPopulationYear =
             Number(
+                data.base_year ??
                 data.year
             );
 
@@ -4442,6 +4466,24 @@ async function loadWorldPopulation() {
             );
 
 
+        if (
+            !Number.isFinite(worldPopulation)
+        ) {
+
+            console.log(
+                "🌍 Invalid world population, retry in 3s"
+            );
+
+            setTimeout(
+                loadWorldPopulation,
+                3000
+            );
+
+            return;
+
+        }
+
+
         updateWorldPopulationDisplay();
 
 
@@ -4449,7 +4491,11 @@ async function loadWorldPopulation() {
             "🌍 World population:",
             formatWorldPopulation(
                 worldPopulation
-            )
+            ),
+            "| year:",
+            worldPopulationYear,
+            "| growth/year:",
+            worldPopulationGrowthPerYear
         );
 
     }
