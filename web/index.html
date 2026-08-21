@@ -668,6 +668,234 @@
 
 
         /* =================================================
+           CLICKABLE EVENTS
+        ================================================= */
+
+        .event {
+
+            cursor: pointer;
+
+            transition:
+                background 0.2s,
+                padding-left 0.2s,
+                border-color 0.2s;
+        }
+
+
+        .event:hover {
+
+            background: #080d13;
+
+            padding-left: 10px;
+
+        }
+
+
+        /* =================================================
+           EVENT DETAIL MODAL
+        ================================================= */
+
+        .event-modal {
+
+            position: fixed;
+
+            inset: 0;
+
+            z-index: 5000;
+
+            display: none;
+
+            align-items: center;
+
+            justify-content: center;
+
+            padding: 30px;
+
+            background:
+                rgba(0, 0, 0, 0.72);
+
+            backdrop-filter:
+                blur(5px);
+        }
+
+
+        .event-modal.open {
+
+            display: flex;
+
+        }
+
+
+        .event-modal-card {
+
+            width: min(720px, 92vw);
+
+            max-height: 86vh;
+
+            overflow-y: auto;
+
+            padding: 28px;
+
+            background: #05080d;
+
+            border: 1px solid #34414e;
+
+            box-shadow:
+                0 20px 70px
+                rgba(0, 0, 0, 0.65);
+
+            position: relative;
+
+        }
+
+
+        .event-modal-close {
+
+            position: absolute;
+
+            top: 14px;
+
+            right: 16px;
+
+            width: 32px;
+
+            height: 32px;
+
+            border: 1px solid #27313c;
+
+            background: #080d13;
+
+            color: #8d98a5;
+
+            cursor: pointer;
+
+            font-size: 18px;
+
+            line-height: 28px;
+
+        }
+
+
+        .event-modal-close:hover {
+
+            color: #ffffff;
+
+            border-color: #596572;
+
+        }
+
+
+        .event-modal-type {
+
+            color: #6f7a86;
+
+            font-size: 11px;
+
+            font-weight: bold;
+
+            letter-spacing: 3px;
+
+            margin-bottom: 10px;
+
+        }
+
+
+        .event-modal-title {
+
+            color: #ffffff;
+
+            font-size: 25px;
+
+            line-height: 1.3;
+
+            font-weight: bold;
+
+            padding-right: 40px;
+
+        }
+
+
+        .event-modal-content {
+
+            margin-top: 20px;
+
+            color: #aeb7c1;
+
+            font-size: 13px;
+
+            line-height: 1.65;
+
+        }
+
+
+        .event-modal-field {
+
+            margin-top: 14px;
+
+            padding-top: 10px;
+
+            border-top: 1px solid #17212b;
+
+        }
+
+
+        .event-modal-label {
+
+            color: #596572;
+
+            font-size: 9px;
+
+            font-weight: bold;
+
+            letter-spacing: 2px;
+
+            margin-bottom: 4px;
+
+        }
+
+
+        .event-modal-value {
+
+            color: #d8dee5;
+
+        }
+
+
+        .event-modal-link {
+
+            display: inline-block;
+
+            margin-top: 20px;
+
+            padding: 9px 13px;
+
+            border: 1px solid #34404d;
+
+            background: #0b1118;
+
+            color: #d8dee5;
+
+            text-decoration: none;
+
+            font-size: 11px;
+
+            font-weight: bold;
+
+            letter-spacing: 1px;
+
+        }
+
+
+        .event-modal-link:hover {
+
+            border-color: #7b8794;
+
+            color: #ffffff;
+
+        }
+
+
+        /* =================================================
            TOOLTIP
         ================================================= */
 
@@ -1294,26 +1522,8 @@
 
     <section class="panel">
 
-
-        <div class="top-title">
-            PRIORITY EVENT
-        </div>
-
-
-        <div
-            id="top-event"
-            class="top-event"
-        >
-
-            <div class="waiting">
-                Waiting for events...
-            </div>
-
-        </div>
-
-
         <div class="section-title">
-            RECENT EVENTS
+            EVENTS · CLICK FOR DETAILS
         </div>
 
 
@@ -1364,6 +1574,41 @@
     </div>
 
 </footer>
+
+
+<div
+    id="event-modal"
+    class="event-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-hidden="true"
+>
+    <div class="event-modal-card">
+
+        <button
+            id="event-modal-close"
+            class="event-modal-close"
+            type="button"
+            aria-label="Close"
+        >×</button>
+
+        <div
+            id="event-modal-type"
+            class="event-modal-type"
+        ></div>
+
+        <div
+            id="event-modal-title"
+            class="event-modal-title"
+        ></div>
+
+        <div
+            id="event-modal-content"
+            class="event-modal-content"
+        ></div>
+
+    </div>
+</div>
 
 
 <script
@@ -2618,6 +2863,14 @@ function addMarker(event) {
     );
 
 
+    marker.on(
+        "click",
+        () => {
+            openEventDetails(event);
+        }
+    );
+
+
     marker.addTo(map);
 
     markers.push(marker);
@@ -2873,6 +3126,14 @@ function addSpaceMarker(event) {
     );
 
 
+    marker.on(
+        "click",
+        () => {
+            openEventDetails(event);
+        }
+    );
+
+
     marker.addTo(map);
 
     markers.push(marker);
@@ -3027,6 +3288,14 @@ function addWeatherMarker(event) {
             opacity: 0.97
         }
 
+    );
+
+
+    marker.on(
+        "click",
+        () => {
+            openEventDetails(event);
+        }
     );
 
 
@@ -3464,279 +3733,341 @@ function renderSpaceDetails(event) {
 
 
 // =====================================================
-// TOP EVENT
+// EVENT DETAIL WINDOW
 // =====================================================
 
-function renderTopEvent(events) {
+const eventModal =
+    document.getElementById(
+        "event-modal"
+    );
 
-    const container =
-        document.getElementById(
-            "top-event"
-        );
+const eventModalClose =
+    document.getElementById(
+        "event-modal-close"
+    );
 
+const eventModalType =
+    document.getElementById(
+        "event-modal-type"
+    );
 
-    if (!events.length) {
+const eventModalTitle =
+    document.getElementById(
+        "event-modal-title"
+    );
 
-        container.className =
-            "top-event";
-
-        container.innerHTML = `
-
-            <div class="waiting">
-                Waiting for events...
-            </div>
-
-        `;
-
-        return;
-
-    }
-
-
-    const sorted =
-
-        [...events].sort(
-
-            (a, b) =>
-
-                (b.score || 0) -
-                (a.score || 0)
-
-        );
+const eventModalContent =
+    document.getElementById(
+        "event-modal-content"
+    );
 
 
-    const event =
-        sorted[0];
-
-
-    container.className =
-
-        "top-event " +
-
-        (
-            event.level || ""
-        ).toLowerCase();
-
-
-    let details = "";
-
+function modalField(
+    label,
+    value
+) {
 
     if (
-        event.type ===
-        "EARTHQUAKE"
+        value === null ||
+        value === undefined ||
+        value === ""
     ) {
 
-        details = `
-
-            <div class="space-field">
-
-                <div class="space-field-label">
-                    LOCATION
-                </div>
-
-                <div class="space-field-value">
-
-                    ${escapeHtml(
-                        event.title
-                    )}
-
-                </div>
-
-            </div>
-
-            <div class="space-field">
-
-                Magnitude:
-                <strong>
-                    ${event.magnitude}
-                </strong>
-
-                · Depth:
-                ${event.depth} km
-
-            </div>
-
-            <div class="space-field">
-
-                Time:
-                ${escapeHtml(
-                    event.time
-                )}
-
-            </div>
-
-        `;
+        return "";
 
     }
 
+    return `
 
-    else if (
-        event.type ===
-        "SPACE"
-    ) {
+        <div class="event-modal-field">
 
-        details =
-            renderSpaceDetails(
-                event
-            );
-
-    }
-
-
-    else if (
-        event.type ===
-        "WEATHER"
-    ) {
-
-        const weatherLocation =
-
-            event.location ||
-
-            (
-                event.title || ""
-            ).replace(
-                "Extreme weather - ",
-                ""
-            );
-
-
-        details = `
-
-            <div class="space-field">
-
-                <div class="space-field-label">
-                    LOCATION
-                </div>
-
-                <div class="space-field-value">
-
-                    ${escapeHtml(
-                        weatherLocation
-                    )}
-
-                </div>
-
+            <div class="event-modal-label">
+                ${escapeHtml(label)}
             </div>
 
-            <div class="space-field">
-
-                ${event.temperature} °C
-
-                · Wind:
-                ${event.wind} km/h
-
-                <br>
-
-                Precipitation:
-                ${event.precipitation} mm
-
+            <div class="event-modal-value">
+                ${escapeHtml(value)}
             </div>
-
-        `;
-
-    }
-
-
-    else if (
-        event.type ===
-        "NEWS"
-    ) {
-
-        details = `
-
-            <div class="space-field">
-
-                <div class="space-field-value" style="
-                    color:#59636e;
-                    font-size:11px;
-                    letter-spacing:1px;
-                    margin-bottom:10px;
-                ">
-
-                    📰 ${escapeHtml(
-                        event.time || ""
-                    )}
-
-                </div>
-
-                <div style="
-                    color:#ffffff;
-                    font-size:15px;
-                    font-weight:bold;
-                    margin-bottom:5px;
-                ">
-
-                    ${escapeHtml(
-                        event.author ||
-                        event.source ||
-                        "News"
-                    )}
-
-                </div>
-
-                <div style="
-                    color:#8d98a5;
-                    font-size:10px;
-                    font-weight:bold;
-                    letter-spacing:2px;
-                    margin-bottom:14px;
-                ">
-
-                    ${escapeHtml(
-                        event.category ||
-                        "NEWS"
-                    )}
-
-                </div>
-
-                <div style="
-                    color:#d8dee5;
-                    font-size:13px;
-                    line-height:1.55;
-                ">
-
-                    ${escapeHtml(
-                        event.title
-                    )}
-
-                </div>
-
-            </div>
-
-        `;
-
-    }
-
-
-    container.innerHTML = `
-
-        <div class="top-event-type">
-
-            ${event.emoji || ""}
-
-            ${escapeHtml(
-                event.type
-            )}
-
-        </div>
-
-
-        <div class="top-event-name">
-
-            ${escapeHtml(
-                event.title
-            )}
-
-        </div>
-
-
-        <div class="top-event-details">
-
-            ${details}
 
         </div>
 
     `;
+
+}
+
+
+function renderEventDetails(
+    event
+) {
+
+    let content = "";
+
+    if (
+        event.type === "EARTHQUAKE"
+    ) {
+
+        content += modalField(
+            "LOCATION",
+            event.title
+        );
+
+        content += modalField(
+            "MAGNITUDE",
+            event.magnitude
+        );
+
+        content += modalField(
+            "DEPTH",
+            event.depth !== undefined
+                ? event.depth + " km"
+                : null
+        );
+
+        content += modalField(
+            "TIME",
+            event.time
+        );
+
+        content += modalField(
+            "GLOBAL SIGNAL SCORE",
+            event.score
+        );
+
+    }
+
+    else if (
+        event.type === "SPACE"
+    ) {
+
+        content += `
+            ${renderSpaceDetails(event)}
+        `;
+
+    }
+
+    else if (
+        event.type === "WEATHER"
+    ) {
+
+        const location =
+            event.location ||
+            event.title ||
+            "Weather alert";
+
+        content += modalField(
+            "LOCATION",
+            location
+        );
+
+        content += modalField(
+            "TEMPERATURE",
+            event.temperature !== undefined
+                ? event.temperature + " °C"
+                : null
+        );
+
+        content += modalField(
+            "WIND",
+            event.wind !== undefined
+                ? event.wind + " km/h"
+                : null
+        );
+
+        content += modalField(
+            "PRECIPITATION",
+            event.precipitation !== undefined
+                ? event.precipitation + " mm"
+                : null
+        );
+
+        content += modalField(
+            "TIME",
+            event.time
+        );
+
+        content += modalField(
+            "GLOBAL SIGNAL SCORE",
+            event.score
+        );
+
+    }
+
+    else if (
+        event.type === "NEWS"
+    ) {
+
+        content += modalField(
+            "SOURCE",
+            event.source ||
+            event.author ||
+            "News"
+        );
+
+        content += modalField(
+            "CATEGORY",
+            event.category ||
+            "NEWS"
+        );
+
+        content += modalField(
+            "TIME",
+            event.time
+        );
+
+        if (event.description) {
+
+            content += modalField(
+                "SUMMARY",
+                event.description
+            );
+
+        }
+
+        if (event.url) {
+
+            content += `
+
+                <a
+                    class="event-modal-link"
+                    href="${escapeHtml(event.url)}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                    OPEN ORIGINAL ARTICLE ↗
+                </a>
+
+            `;
+
+        }
+
+    }
+
+    else {
+
+        content += modalField(
+            "TIME",
+            event.time
+        );
+
+        content += modalField(
+            "GLOBAL SIGNAL SCORE",
+            event.score
+        );
+
+    }
+
+    return content;
+
+}
+
+
+function openEventDetails(
+    event
+) {
+
+    if (!event || !eventModal) {
+        return;
+    }
+
+    eventModalType.textContent =
+        `${event.emoji || ""} ${event.type || "EVENT"}`;
+
+    eventModalTitle.textContent =
+        event.title ||
+        "Event";
+
+    eventModalContent.innerHTML =
+        renderEventDetails(event);
+
+    eventModal.classList.add(
+        "open"
+    );
+
+    eventModal.setAttribute(
+        "aria-hidden",
+        "false"
+    );
+
+}
+
+
+function closeEventDetails() {
+
+    if (!eventModal) {
+        return;
+    }
+
+    eventModal.classList.remove(
+        "open"
+    );
+
+    eventModal.setAttribute(
+        "aria-hidden",
+        "true"
+    );
+
+}
+
+
+if (eventModalClose) {
+
+    eventModalClose.addEventListener(
+        "click",
+        closeEventDetails
+    );
+
+}
+
+
+if (eventModal) {
+
+    eventModal.addEventListener(
+        "click",
+        event => {
+
+            if (
+                event.target === eventModal
+            ) {
+
+                closeEventDetails();
+
+            }
+
+        }
+    );
+
+}
+
+
+document.addEventListener(
+    "keydown",
+    event => {
+
+        if (
+            event.key === "Escape"
+        ) {
+
+            closeEventDetails();
+
+        }
+
+    }
+);
+
+
+// =====================================================
+// TOP EVENT
+// =====================================================
+
+// Priority Event removed.
+// Event details are shown only after a user click.
+
+function renderTopEvent(events) {
+
+    // Kept as a compatibility no-op in case older
+    // initialization code still calls this function.
+
+    return;
 
 }
 
@@ -3976,6 +4307,14 @@ function renderEvents(events) {
             `;
 
 
+            element.addEventListener(
+                "click",
+                () => {
+                    openEventDetails(event);
+                }
+            );
+
+
             container.appendChild(
                 element
             );
@@ -4099,10 +4438,8 @@ function renderNewsTicker(events) {
                         "click",
                         () => {
 
-                            window.open(
-                                event.url,
-                                "_blank",
-                                "noopener,noreferrer"
+                            openEventDetails(
+                                event
                             );
 
                         }
@@ -4681,12 +5018,6 @@ async function loadEvents() {
         setServerStatus(
             true
         );
-
-
-        renderTopEvent(
-            events
-        );
-
 
         renderEvents(
             events
