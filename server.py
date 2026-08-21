@@ -149,7 +149,7 @@ def add_event(event):
 
 def load_world_population():
 
-    print("🌍 World population monitor avviato")
+    print("🌍 World population: caricamento World Bank...")
 
     try:
 
@@ -157,23 +157,42 @@ def load_world_population():
             WORLD_POPULATION_URL,
             params={
                 "format": "json",
-                "per_page": 10
+                "per_page": 100
             },
-            timeout=15
+            timeout=20
+        )
+
+        print(
+            f"🌍 World Bank population HTTP: "
+            f"{response.status_code}"
         )
 
         response.raise_for_status()
 
         data = response.json()
 
-        if not isinstance(data, list) or len(data) < 2:
-            raise ValueError("Risposta World Bank non valida")
+        if (
+            not isinstance(data, list)
+            or len(data) < 2
+            or not isinstance(data[1], list)
+        ):
+            raise ValueError(
+                "Risposta World Bank WLD non valida"
+            )
 
         rows = data[1]
+
+        print(
+            f"🌍 World Bank population rows: "
+            f"{len(rows)}"
+        )
 
         values = []
 
         for row in rows:
+
+            if not isinstance(row, dict):
+                continue
 
             value = row.get("value")
             year = row.get("date")
@@ -182,13 +201,16 @@ def load_world_population():
                 continue
 
             try:
+
                 values.append(
                     (
                         int(year),
                         float(value)
                     )
                 )
+
             except (ValueError, TypeError):
+
                 continue
 
         values.sort(
@@ -196,58 +218,255 @@ def load_world_population():
             reverse=True
         )
 
-        if not values:
-            raise ValueError(
-                "Nessun dato di popolazione disponibile"
+        # -------------------------------------------------
+        # PRIMARY: World Bank WLD aggregate
+        # -------------------------------------------------
+
+        if values:
+
+            latest_year, latest_population = values[0]
+
+            previous = None
+
+            for item in values[1:]:
+
+                if item[0] < latest_year:
+                    previous = item
+                    break
+
+            previous_year = None
+            previous_population = None
+            growth_per_year = 0.0
+
+            if previous:
+
+                previous_year, previous_population = previous
+
+                years = (
+                    latest_year -
+                    previous_year
+                )
+
+                if (
+                    years > 0
+                    and previous_population > 0
+                ):
+
+                    growth_per_year = (
+                        latest_population -
+                        previous_population
+                    ) / years
+
+            world_population["population"] = (
+                latest_population
             )
 
-        latest_year, latest_population = values[0]
+            world_population["year"] = (
+                latest_year
+            )
 
-        previous = None
+            world_population["previous_population"] = (
+                previous_population
+            )
 
-        for item in values[1:]:
+            world_population["previous_year"] = (
+                previous_year
+            )
 
-            if item[0] < latest_year:
-                previous = item
+            world_population["growth_per_year"] = (
+                growth_per_year
+            )
+
+            world_population["updated"] = (
+                datetime.now(
+                    timezone.utc
+                ).isoformat()
+            )
+
+            print(
+                f"🌍 WORLD POPULATION: "
+                f"{latest_population:,.0f} "
+                f"(World Bank {latest_year})"
+            )
+
+            return
+
+        # -------------------------------------------------
+        # FALLBACK: sum latest available country values
+        # -------------------------------------------------
+
+        print(
+            "⚠️ World Bank WLD senza valori: "
+            "uso fallback country/all"
+        )
+
+        page = 1
+        per_page = 400
+        all_rows = []
+
+        while True:
+
+            fallback_response = requests.get(
+                COUNTRY_POPULATION_URL,
+                params={
+                    "format": "json",
+                    "per_page": per_page,
+                    "page": page
+                },
+                timeout=30
+            )
+
+            print(
+                f"🌍 World Bank country population "
+                f"page {page} HTTP: "
+                f"{fallback_response.status_code}"
+            )
+
+            fallback_response.raise_for_status()
+
+            fallback_data = (
+                fallback_response.json()
+            )
+
+            if (
+                not isinstance(fallback_data, list)
+                or len(fallback_data) < 2
+            ):
+                raise ValueError(
+                    "Fallback World Bank country response "
+                    "non valido"
+                )
+
+            all_rows.extend(
+                fallback_data[1] or []
+            )
+
+            meta = fallback_data[0] or {}
+
+            total_pages = int(
+                meta.get("pages", page)
+            )
+
+            if page >= total_pages:
                 break
 
-        previous_year = None
-        previous_population = None
-        growth_per_year = 0.0
+            page += 1
 
-        if previous:
+            time.sleep(0.15)
 
-            previous_year, previous_population = previous
+        latest_by_country = {}
 
-            years = latest_year - previous_year
+        for row in all_rows:
 
-            if years > 0 and previous_population > 0:
+            if not isinstance(row, dict):
+                continue
 
-                growth_per_year = (
-                    latest_population -
-                    previous_population
-                ) / years
+            iso3 = (
+                row.get("countryiso3code")
+                or ""
+            ).upper()
 
-        world_population["population"] = latest_population
-        world_population["year"] = latest_year
-        world_population["previous_population"] = previous_population
-        world_population["previous_year"] = previous_year
-        world_population["growth_per_year"] = growth_per_year
+            value = row.get("value")
+            year = row.get("date")
+
+            if (
+                len(iso3) != 3
+                or iso3 == "WLD"
+                or value is None
+                or year is None
+            ):
+                continue
+
+            try:
+
+                year_int = int(year)
+                population = float(value)
+
+            except (ValueError, TypeError):
+
+                continue
+
+            if (
+                iso3 not in latest_by_country
+                or year_int >
+                latest_by_country[iso3]["year"]
+            ):
+
+                latest_by_country[iso3] = {
+
+                    "population":
+                        population,
+
+                    "year":
+                        year_int
+
+                }
+
+        if not latest_by_country:
+
+            raise ValueError(
+                "Fallback country/all senza dati"
+            )
+
+        # Prefer a common latest year where possible.
+        years = [
+            item["year"]
+            for item in latest_by_country.values()
+        ]
+
+        target_year = max(
+            set(years),
+            key=years.count
+        )
+
+        total_population = 0.0
+
+        for item in latest_by_country.values():
+
+            if item["year"] == target_year:
+
+                total_population += (
+                    item["population"]
+                )
+
+        if total_population <= 0:
+
+            raise ValueError(
+                "Fallback country/all ha prodotto "
+                "una popolazione nulla"
+            )
+
+        world_population["population"] = (
+            total_population
+        )
+
+        world_population["year"] = (
+            target_year
+        )
+
+        world_population["previous_population"] = None
+        world_population["previous_year"] = None
+        world_population["growth_per_year"] = 0.0
+
         world_population["updated"] = (
-            datetime.now(timezone.utc).isoformat()
+            datetime.now(
+                timezone.utc
+            ).isoformat()
         )
 
         print(
             f"🌍 WORLD POPULATION: "
-            f"{latest_population:,.0f} "
-            f"(World Bank {latest_year})"
+            f"{total_population:,.0f} "
+            f"(World Bank country fallback "
+            f"{target_year}, "
+            f"{len(latest_by_country)} countries)"
         )
 
     except Exception as error:
 
         print(
-            "Errore popolazione mondiale:",
-            error
+            "❌ Errore popolazione mondiale:",
+            repr(error)
         )
 
 
@@ -2580,6 +2799,13 @@ def ambient_music():
 def get_population():
 
     population = get_live_world_population()
+
+    if population is None:
+
+        print(
+            "⚠️ /api/population richiesto: "
+            "World Bank population ancora non disponibile"
+        )
 
     return jsonify({
 
