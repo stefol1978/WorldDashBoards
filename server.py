@@ -2807,7 +2807,7 @@ def get_population():
             "World Bank population ancora non disponibile"
         )
 
-    return jsonify({
+    response = jsonify({
 
         "population": population,
 
@@ -2844,6 +2844,14 @@ def get_population():
             world_population["updated"]
 
     })
+
+    response.headers["Cache-Control"] = (
+        "no-store, no-cache, must-revalidate, max-age=0"
+    )
+
+    response.headers["Pragma"] = "no-cache"
+
+    return response
 
 
 @app.route("/api/countries")
@@ -3184,7 +3192,26 @@ def start_background_monitors():
 
 
 # Gunicorn imports "app" instead of executing this file as __main__.
-# Start the monitors on import so the deployed API is populated too.
+# Populate the critical datasets synchronously before accepting requests.
+# This prevents the browser from seeing an empty dataset during startup.
+print("🚀 Initial data bootstrap...")
+
+try:
+    load_world_population()
+except Exception as error:
+    print("❌ Initial world population bootstrap:", repr(error))
+
+try:
+    load_country_populations()
+except Exception as error:
+    print("❌ Initial country population bootstrap:", repr(error))
+
+try:
+    load_country_metadata()
+except Exception as error:
+    print("❌ Initial country metadata bootstrap:", repr(error))
+
+# Start the periodic/background monitors after the initial datasets exist.
 start_background_monitors()
 
 
