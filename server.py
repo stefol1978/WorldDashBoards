@@ -1318,7 +1318,7 @@ def earthquake_level(score):
         return "MEDIUM", "⚠️"
 
 
-def earthquake_monitor():
+def earthquake_monitor(once=False):
 
     print("🌍 Earthquake monitor avviato")
 
@@ -1452,6 +1452,10 @@ def earthquake_monitor():
                 "Errore terremoti:",
                 error
             )
+
+        if once:
+
+            return
 
         time.sleep(60)
 
@@ -2743,6 +2747,8 @@ def load_news_events_once():
 
     try:
 
+        loaded = 0
+
         headers = {
 
             "Authorization":
@@ -2993,6 +2999,8 @@ def load_news_events_once():
             if accepted >= 5:
 
                 break
+
+        print(f"📰 Loaded news: {loaded}")
 
     except Exception as error:
 
@@ -3487,6 +3495,15 @@ except Exception as error:
     print("❌ Initial news bootstrap:", repr(error))
 
 # Start the periodic/background monitors after the initial datasets exist.
+
+
+print("🌍 Initial earthquake bootstrap...")
+
+try:
+    earthquake_monitor(once=True)
+except Exception as error:
+    print("❌ Initial earthquake bootstrap:", repr(error))
+
 
 start_background_monitors()
 
