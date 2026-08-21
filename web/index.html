@@ -1,0 +1,4763 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>GLOBAL SIGNAL · LIVE WORLD MONITOR</title>
+
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    >
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+
+            margin: 0;
+            width: 100%;
+            height: 100%;
+
+            background: #02050a;
+            color: white;
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+
+            overflow: hidden;
+        }
+
+
+        /* =================================================
+           HEADER
+        ================================================= */
+
+        .header {
+
+            height: 82px;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: space-between;
+
+            padding: 0 28px;
+
+            background: #05080d;
+
+            border-bottom:
+                1px solid #18212b;
+
+            position: relative;
+
+            z-index: 1000;
+        }
+
+
+        .header-left {
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 28px;
+        }
+
+
+        .logo {
+
+            font-size: 30px;
+
+            font-weight: bold;
+
+            letter-spacing: 5px;
+        }
+
+
+        .utc-clock {
+
+            display: flex;
+
+            align-items: baseline;
+
+            gap: 8px;
+
+            color: #8d98a5;
+
+            font-size: 14px;
+
+            letter-spacing: 2px;
+        }
+
+
+        .utc-clock span {
+
+            color: #59636e;
+
+            font-size: 10px;
+
+            font-weight: bold;
+
+            letter-spacing: 2px;
+        }
+
+
+        .utc-clock strong {
+
+            color: #d7dde4;
+
+            font-size: 20px;
+
+            font-weight: normal;
+
+            letter-spacing: 2px;
+
+            font-variant-numeric:
+                tabular-nums;
+        }
+
+
+        .world-population {
+
+            display: flex;
+
+            align-items: baseline;
+
+            gap: 8px;
+
+            color: #8d98a5;
+
+            font-size: 15px;
+
+            letter-spacing: 2px;
+        }
+
+
+        .world-population span {
+
+            color: #59636e;
+
+            font-size: 10px;
+
+            font-weight: bold;
+
+            letter-spacing: 2px;
+        }
+
+
+        .world-population strong {
+
+            color: #d7dde4;
+
+            font-size: 20px;
+
+            font-weight: normal;
+
+            letter-spacing: 1px;
+
+            font-variant-numeric:
+                tabular-nums;
+        }
+
+
+        .live {
+
+            color: #ff3b30;
+
+            font-size: 14px;
+
+            font-weight: bold;
+
+            letter-spacing: 2px;
+        }
+
+
+        /* =================================================
+           MUSIC CONTROL
+        ================================================= */
+
+        .music-control {
+
+            margin-right: 22px;
+
+            padding: 7px 10px;
+
+            border: 1px solid #27313c;
+
+            background: #080d13;
+
+            color: #8d98a5;
+
+            font-size: 9px;
+
+            font-weight: bold;
+
+            letter-spacing: 1.5px;
+
+            cursor: pointer;
+
+            transition:
+                border-color 0.2s,
+                color 0.2s,
+                background 0.2s;
+        }
+
+
+        .music-control:hover {
+
+            border-color: #596572;
+
+            color: #d7dde4;
+
+        }
+
+
+        .music-control.on {
+
+            color: #d7dde4;
+
+            border-color: #596572;
+
+            background: #0b1118;
+
+        }
+
+
+        /* =================================================
+           MAIN
+        ================================================= */
+
+        .main {
+
+            height:
+                calc(100vh - 82px - 70px);
+
+            display: grid;
+
+            grid-template-columns:
+                2.25fr 1fr;
+        }
+
+
+        /* =================================================
+           MAP
+        ================================================= */
+
+        #map {
+
+            width: 100%;
+            height: 100%;
+
+            background: #02050a;
+        }
+
+
+        .leaflet-container {
+
+            background: #02050a;
+        }
+
+
+        .leaflet-control-zoom {
+
+            display: none;
+        }
+
+
+        /* =================================================
+           CONTINENT LABELS
+        ================================================= */
+
+        .continent-label {
+
+            background: transparent;
+
+            border: none;
+
+            box-shadow: none;
+
+            color:
+                rgba(235, 240, 245, 0.82);
+
+            font-size: 15px;
+
+            font-weight: bold;
+
+            letter-spacing: 2px;
+
+            text-align: center;
+
+            white-space: nowrap;
+
+            text-shadow:
+                0 1px 3px #000,
+                0 0 8px #000;
+        }
+
+
+        .continent-label.small {
+
+            font-size: 12px;
+
+            letter-spacing: 1.5px;
+        }
+
+
+        /* =================================================
+           SPACE ROCKET MARKER
+        ================================================= */
+
+        .rocket-marker {
+
+            width: 42px;
+
+            height: 42px;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            font-size: 29px;
+
+            cursor: pointer;
+
+            filter:
+                drop-shadow(
+                    0 0 7px
+                    rgba(255,255,255,0.8)
+                );
+
+            animation:
+                rocketPulse 2s infinite;
+        }
+
+
+        @keyframes rocketPulse {
+
+            0% {
+
+                transform:
+                    scale(1);
+
+                filter:
+                    drop-shadow(
+                        0 0 4px
+                        rgba(255,255,255,0.5)
+                    );
+            }
+
+            50% {
+
+                transform:
+                    scale(1.12);
+
+                filter:
+                    drop-shadow(
+                        0 0 12px
+                        rgba(255,255,255,0.9)
+                    );
+            }
+
+            100% {
+
+                transform:
+                    scale(1);
+
+                filter:
+                    drop-shadow(
+                        0 0 4px
+                        rgba(255,255,255,0.5)
+                    );
+            }
+        }
+
+
+        /* =================================================
+           RIGHT PANEL
+        ================================================= */
+
+        .panel {
+
+            padding: 28px;
+
+            background: #05080d;
+
+            border-left:
+                1px solid #18212b;
+
+            overflow-y: auto;
+        }
+
+
+        .top-title {
+
+            margin-bottom: 10px;
+
+            color: #6f7a86;
+
+            font-size: 12px;
+
+            letter-spacing: 3px;
+
+            font-weight: bold;
+        }
+
+
+        .top-event {
+
+            padding: 20px;
+
+            margin-bottom: 28px;
+
+            background: #080d13;
+
+            border:
+                1px solid #27313c;
+
+            transition:
+                border-color 0.3s,
+                box-shadow 0.3s;
+        }
+
+
+        .top-event.critical {
+
+            border-color: #ff3b30;
+
+            box-shadow:
+                0 0 25px
+                rgba(255, 59, 48, 0.18);
+        }
+
+
+        .top-event.high {
+
+            border-color: #ff9500;
+
+            box-shadow:
+                0 0 20px
+                rgba(255, 149, 0, 0.12);
+        }
+
+
+        .top-event.medium {
+
+            border-color: #ffd60a;
+        }
+
+
+        .top-event-type {
+
+            color: #9ba6b2;
+
+            font-size: 12px;
+
+            letter-spacing: 2px;
+
+            font-weight: bold;
+        }
+
+
+        .top-event-name {
+
+            margin-top: 8px;
+
+            font-size: 23px;
+
+            line-height: 1.3;
+
+            font-weight: bold;
+        }
+
+
+        .top-event-details {
+
+            margin-top: 16px;
+
+            color: #aab3bd;
+
+            font-size: 13px;
+
+            line-height: 1.7;
+        }
+
+
+        /* =================================================
+           SPACE DETAILS
+        ================================================= */
+
+        .space-field {
+
+            margin-top: 11px;
+
+            padding-top: 9px;
+
+            border-top:
+                1px solid #17212b;
+        }
+
+
+        .space-field-label {
+
+            margin-bottom: 3px;
+
+            color: #596572;
+
+            font-size: 9px;
+
+            font-weight: bold;
+
+            letter-spacing: 2px;
+        }
+
+
+        .space-field-value {
+
+            color: #d8dee5;
+
+            font-size: 13px;
+
+            line-height: 1.4;
+        }
+
+
+        .space-status {
+
+            display: inline-block;
+
+            margin-top: 5px;
+
+            padding:
+                4px 8px;
+
+            border:
+                1px solid #34404d;
+
+            background: #0b1118;
+
+            color: #d8dee5;
+
+            font-size: 10px;
+
+            font-weight: bold;
+
+            letter-spacing: 1px;
+        }
+
+
+        .space-date {
+
+            color: #ffffff;
+
+            font-size: 15px;
+
+            font-weight: bold;
+
+            letter-spacing: 1px;
+        }
+
+
+        .space-description {
+
+            color: #8f9aa5;
+
+            font-size: 12px;
+
+            line-height: 1.55;
+
+            max-height: 90px;
+
+            overflow: hidden;
+        }
+
+
+        /* =================================================
+           RECENT EVENTS
+        ================================================= */
+
+        .section-title {
+
+            margin-bottom: 8px;
+
+            color: #6f7a86;
+
+            font-size: 12px;
+
+            letter-spacing: 3px;
+
+            font-weight: bold;
+        }
+
+
+        .event {
+
+            padding: 15px 0;
+
+            border-bottom:
+                1px solid #18212b;
+        }
+
+
+        .event-time {
+
+            color: #59636e;
+
+            font-size: 11px;
+        }
+
+
+        .event-name {
+
+            margin-top: 5px;
+
+            font-size: 16px;
+
+            line-height: 1.35;
+
+            font-weight: bold;
+        }
+
+
+        .event-details {
+
+            margin-top: 6px;
+
+            color: #818c98;
+
+            font-size: 12px;
+
+            line-height: 1.55;
+        }
+
+
+        .event-location {
+
+            margin-bottom: 4px;
+
+            color: #cbd3dc;
+
+            font-size: 13px;
+
+            font-weight: bold;
+        }
+
+
+        .waiting {
+
+            color: #4d5864;
+
+            font-size: 13px;
+        }
+
+
+        /* =================================================
+           TOOLTIP
+        ================================================= */
+
+        .leaflet-tooltip {
+
+            padding:
+                10px 12px;
+
+            background:
+                rgba(5, 8, 13, 0.97);
+
+            color: white;
+
+            border:
+                1px solid #394553;
+
+            border-radius: 4px;
+
+            box-shadow:
+                0 5px 20px
+                rgba(0, 0, 0, 0.5);
+        }
+
+
+        .leaflet-tooltip-top:before {
+
+            border-top-color:
+                #394553;
+        }
+
+
+        /* =================================================
+           COUNTRY INFORMATION
+        ================================================= */
+
+        .country-info {
+
+            min-width: 230px;
+
+            line-height: 1.45;
+
+        }
+
+
+        .country-info-title {
+
+            color: #ffffff;
+
+            font-size: 15px;
+
+            font-weight: bold;
+
+            margin-bottom: 10px;
+
+        }
+
+
+        .country-info-row {
+
+            display: flex;
+
+            justify-content: space-between;
+
+            gap: 18px;
+
+            padding: 4px 0;
+
+            border-top:
+                1px solid #17212b;
+
+        }
+
+
+        .country-info-label {
+
+            color: #697684;
+
+            font-size: 9px;
+
+            font-weight: bold;
+
+            letter-spacing: 1.5px;
+
+        }
+
+
+        .country-info-value {
+
+            color: #d8dee5;
+
+            font-size: 12px;
+
+            text-align: right;
+
+        }
+
+
+        /* =================================================
+           WEATHER ALERT MARKER
+        ================================================= */
+
+        .weather-marker {
+
+            width: 36px;
+            height: 36px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            font-size: 25px;
+
+            border-radius: 50%;
+
+            filter:
+                drop-shadow(
+                    0 0 8px
+                    rgba(255,149,0,0.85)
+                );
+
+            animation:
+                weatherPulse 1.8s infinite;
+
+        }
+
+
+        @keyframes weatherPulse {
+
+            0% {
+
+                transform: scale(1);
+
+                filter:
+                    drop-shadow(
+                        0 0 5px
+                        rgba(255,149,0,0.55)
+                    );
+
+            }
+
+            50% {
+
+                transform: scale(1.12);
+
+                filter:
+                    drop-shadow(
+                        0 0 14px
+                        rgba(255,149,0,0.95)
+                    );
+
+            }
+
+            100% {
+
+                transform: scale(1);
+
+                filter:
+                    drop-shadow(
+                        0 0 5px
+                        rgba(255,149,0,0.55)
+                    );
+
+            }
+
+        }
+
+
+        /* =================================================
+           EARTHQUAKE PULSE
+        ================================================= */
+
+        .quake-marker {
+
+            animation:
+                quakePulse 2.5s infinite;
+        }
+
+
+        .quake-marker-strong {
+
+            animation:
+                quakePulseStrong 1.5s infinite;
+        }
+
+
+        .quake-marker-critical {
+
+            animation:
+                quakePulseCritical 1s infinite;
+        }
+
+
+        @keyframes quakePulse {
+
+            0% {
+
+                box-shadow:
+                    0 0 0 0
+                    rgba(255, 59, 48, 0.55);
+            }
+
+            70% {
+
+                box-shadow:
+                    0 0 0 10px
+                    rgba(255, 59, 48, 0);
+            }
+
+            100% {
+
+                box-shadow:
+                    0 0 0 0
+                    rgba(255, 59, 48, 0);
+            }
+        }
+
+
+        @keyframes quakePulseStrong {
+
+            0% {
+
+                box-shadow:
+                    0 0 0 0
+                    rgba(255, 59, 48, 0.8);
+            }
+
+            70% {
+
+                box-shadow:
+                    0 0 0 22px
+                    rgba(255, 59, 48, 0);
+            }
+
+            100% {
+
+                box-shadow:
+                    0 0 0 0
+                    rgba(255, 59, 48, 0);
+            }
+        }
+
+
+        @keyframes quakePulseCritical {
+
+            0% {
+
+                box-shadow:
+                    0 0 0 0
+                    rgba(255, 59, 48, 0.95);
+            }
+
+            70% {
+
+                box-shadow:
+                    0 0 0 35px
+                    rgba(255, 59, 48, 0);
+            }
+
+            100% {
+
+                box-shadow:
+                    0 0 0 0
+                    rgba(255, 59, 48, 0);
+            }
+        }
+
+
+        /* =================================================
+           NEWS TICKER
+        ================================================= */
+
+        .news-bar {
+
+            height: 70px;
+
+            width: 100%;
+
+            display: flex;
+
+            align-items: center;
+
+            background: #05080d;
+
+            border-top:
+                1px solid #18212b;
+
+            position: relative;
+
+            z-index: 2000;
+
+            overflow: hidden;
+        }
+
+
+        .news-label {
+
+            height: 100%;
+
+            min-width: 165px;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            background: #090e14;
+
+            border-right:
+                1px solid #27313c;
+
+            color: #d7dde4;
+
+            font-size: 12px;
+
+            font-weight: bold;
+
+            letter-spacing: 3px;
+
+            position: relative;
+
+            z-index: 3;
+        }
+
+
+        .news-label::before {
+
+            content: "";
+
+            width: 7px;
+
+            height: 7px;
+
+            margin-right: 10px;
+
+            border-radius: 50%;
+
+            background: #ff3b30;
+
+            box-shadow:
+                0 0 10px
+                rgba(255, 59, 48, 0.8);
+
+            animation:
+                newsPulse 1.5s infinite;
+        }
+
+
+        .news-window {
+
+            height: 100%;
+
+            flex: 1;
+
+            overflow: hidden;
+
+            position: relative;
+
+            display: flex;
+
+            align-items: center;
+        }
+
+
+        .news-track {
+
+            display: inline-flex;
+
+            align-items: center;
+
+            white-space: nowrap;
+
+            animation:
+                newsScroll 55s linear infinite;
+
+            padding-left: 100%;
+        }
+
+
+        .news-item {
+
+            display: inline-flex;
+
+            align-items: center;
+
+            margin-right: 80px;
+
+            color: #aeb7c1;
+
+            font-size: 15px;
+
+            letter-spacing: 0.5px;
+        }
+
+
+        .news-item strong {
+
+            margin-right: 12px;
+
+            color: #ffffff;
+
+            font-size: 12px;
+
+            letter-spacing: 2px;
+        }
+
+
+        .news-separator {
+
+            margin-right: 80px;
+
+            color: #394553;
+
+            font-size: 16px;
+        }
+
+
+        @keyframes newsScroll {
+
+            0% {
+
+                transform:
+                    translateX(0);
+            }
+
+            100% {
+
+                transform:
+                    translateX(-100%);
+            }
+        }
+
+
+        @keyframes newsPulse {
+
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.35;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+
+        /* =================================================
+           BROADCAST MODE
+        ================================================= */
+
+        .broadcast-watermark {
+
+            position: fixed;
+
+            right: 18px;
+
+            bottom: 76px;
+
+            z-index: 3000;
+
+            color: rgba(180, 190, 200, 0.42);
+
+            font-size: 9px;
+
+            font-weight: bold;
+
+            letter-spacing: 2px;
+
+            pointer-events: none;
+
+            text-transform: uppercase;
+
+        }
+
+
+        @media (min-width: 1600px) {
+
+            .header {
+                padding: 0 34px;
+            }
+
+            .panel {
+                padding: 30px;
+            }
+
+            .top-event {
+                padding: 22px;
+            }
+
+            .event {
+                padding: 17px 0;
+            }
+
+        }
+
+
+        @media (max-width: 1100px) {
+
+            .logo {
+                font-size: 23px;
+                letter-spacing: 4px;
+            }
+
+            .world-population {
+                display: none;
+            }
+
+            .main {
+                grid-template-columns: 1.8fr 1fr;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="broadcast-watermark">
+    GLOBAL SIGNAL · LIVE WORLD MONITOR
+</div>
+
+
+<audio
+    id="ambient-music"
+    loop
+    preload="none"
+    src="ambient.mp3"
+></audio>
+
+
+<!-- =====================================================
+     HEADER
+===================================================== -->
+
+<header class="header">
+
+    <div class="header-left">
+
+        <div class="logo">
+            WORLDWIDE EVENTS
+        </div>
+
+        <div
+            id="server-status"
+            style="
+                color:#59636e;
+                font-size:9px;
+                font-weight:bold;
+                letter-spacing:1.5px;
+                margin-left:18px;
+            "
+        >
+            SERVER
+        </div>
+
+
+        <div class="utc-clock">
+
+            <span>
+                UTC
+            </span>
+
+            <strong id="utc-time">
+                00:00:00
+            </strong>
+
+        </div>
+
+
+        <div class="world-population">
+
+            <span>
+                🌍 WORLD POPULATION
+            </span>
+
+            <strong id="world-population">
+                —
+            </strong>
+
+        </div>
+
+    </div>
+
+
+    <div style="
+        display:flex;
+        align-items:center;
+    ">
+
+        <button
+            id="music-control"
+            class="music-control"
+            type="button"
+            aria-label="Toggle ambient music"
+        >
+            ♪ MUSIC: OFF
+        </button>
+
+        <div class="live">
+            ● LIVE
+        </div>
+
+    </div>
+
+</header>
+
+
+<!-- =====================================================
+     MAIN
+===================================================== -->
+
+<main class="main">
+
+
+    <section id="map"></section>
+
+
+    <section class="panel">
+
+
+        <div class="top-title">
+            PRIORITY EVENT
+        </div>
+
+
+        <div
+            id="top-event"
+            class="top-event"
+        >
+
+            <div class="waiting">
+                Waiting for events...
+            </div>
+
+        </div>
+
+
+        <div class="section-title">
+            RECENT EVENTS
+        </div>
+
+
+        <div id="events">
+
+            <div class="waiting">
+                Waiting for events...
+            </div>
+
+        </div>
+
+
+    </section>
+
+</main>
+
+
+<!-- =====================================================
+     NEWS TICKER
+===================================================== -->
+
+<footer class="news-bar">
+
+    <div class="news-label">
+        NEWS
+    </div>
+
+
+    <div class="news-window">
+
+        <div
+            id="news-track"
+            class="news-track"
+        >
+
+            <div class="news-item">
+
+                <strong>
+                    NEWS
+                </strong>
+
+                Worldwide Events
+
+            </div>
+
+        </div>
+
+    </div>
+
+</footer>
+
+
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+</script>
+
+
+<script>
+
+
+// =====================================================
+// AMBIENT MUSIC
+// =====================================================
+
+const ambientMusic =
+    document.getElementById(
+        "ambient-music"
+    );
+
+
+const musicControl =
+    document.getElementById(
+        "music-control"
+    );
+
+
+function updateMusicButton(
+    enabled
+) {
+
+    if (!musicControl) {
+        return;
+    }
+
+
+    musicControl.textContent =
+        enabled
+            ? "♪ MUSIC: ON"
+            : "♪ MUSIC: OFF";
+
+
+    musicControl.classList.toggle(
+        "on",
+        enabled
+    );
+
+}
+
+
+function setMusicEnabled(
+    enabled
+) {
+
+    if (!ambientMusic) {
+        return;
+    }
+
+
+    if (enabled) {
+
+        ambientMusic.volume =
+            0.12;
+
+
+        ambientMusic.play()
+            .then(
+                () => {
+
+                    localStorage.setItem(
+                        "worldwide-events-music",
+                        "on"
+                    );
+
+                    updateMusicButton(
+                        true
+                    );
+
+                }
+            )
+            .catch(
+                () => {
+
+                    // Browser autoplay/security policy.
+                    // User can click the button again.
+                    localStorage.setItem(
+                        "worldwide-events-music",
+                        "off"
+                    );
+
+                    updateMusicButton(
+                        false
+                    );
+
+                }
+            );
+
+    }
+
+    else {
+
+        ambientMusic.pause();
+
+        ambientMusic.currentTime =
+            0;
+
+        localStorage.setItem(
+            "worldwide-events-music",
+            "off"
+        );
+
+        updateMusicButton(
+            false
+        );
+
+    }
+
+}
+
+
+if (musicControl) {
+
+    musicControl.addEventListener(
+        "click",
+        () => {
+
+            const enabled =
+                !ambientMusic.paused;
+
+            setMusicEnabled(
+                !enabled
+            );
+
+        }
+    );
+
+}
+
+
+// Audio stays OFF on first visit.
+// If the user previously enabled it, we only wait for their
+// next interaction before attempting playback, avoiding autoplay blocks.
+const savedMusicPreference =
+    localStorage.getItem(
+        "worldwide-events-music"
+    );
+
+
+updateMusicButton(
+    savedMusicPreference === "on"
+);
+
+
+if (
+    savedMusicPreference === "on"
+) {
+
+    const resumeMusic =
+        () => {
+
+            setMusicEnabled(
+                true
+            );
+
+            document.removeEventListener(
+                "click",
+                resumeMusic
+            );
+
+            document.removeEventListener(
+                "keydown",
+                resumeMusic
+            );
+
+        };
+
+
+    document.addEventListener(
+        "click",
+        resumeMusic,
+        {
+            once: true
+        }
+    );
+
+
+    document.addEventListener(
+        "keydown",
+        resumeMusic,
+        {
+            once: true
+        }
+    );
+
+}
+
+
+// =====================================================
+// GLOBAL VIEW
+// =====================================================
+
+const GLOBAL_VIEW = {
+
+    center: [20, 30],
+
+    zoom: 2.2
+
+};
+
+
+// =====================================================
+// MAP
+// =====================================================
+
+const map = L.map(
+
+    "map",
+
+    {
+
+        center:
+            GLOBAL_VIEW.center,
+
+        zoom:
+            GLOBAL_VIEW.zoom,
+
+        minZoom: 2.0,
+
+        maxZoom: 6,
+
+        zoomControl: false,
+
+        attributionControl: false
+
+    }
+
+);
+
+
+L.tileLayer(
+
+    "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png",
+
+    {
+
+        maxZoom: 19,
+
+        subdomains: "abcd",
+
+        noWrap: true
+
+    }
+
+).addTo(map);
+
+
+// =====================================================
+// CONTINENT LABELS
+// =====================================================
+
+function addContinentLabel(
+    position,
+    text,
+    width,
+    small = false
+) {
+
+    L.marker(
+
+        position,
+
+        {
+
+            icon: L.divIcon({
+
+                className:
+                    small
+                        ? "continent-label small"
+                        : "continent-label",
+
+                html:
+                    text,
+
+                iconSize:
+                    [width, 30],
+
+                iconAnchor:
+                    [width / 2, 15]
+
+            }),
+
+            interactive: false
+
+        }
+
+    ).addTo(map);
+
+}
+
+
+addContinentLabel(
+    [45, -100],
+    "NORTH AMERICA",
+    190
+);
+
+
+addContinentLabel(
+    [-18, -58],
+    "SOUTH AMERICA",
+    190
+);
+
+
+addContinentLabel(
+    [52, 18],
+    "EUROPE",
+    130
+);
+
+
+addContinentLabel(
+    [5, 20],
+    "AFRICA",
+    130
+);
+
+
+addContinentLabel(
+    [42, 90],
+    "ASIA",
+    120
+);
+
+
+addContinentLabel(
+    [-25, 135],
+    "OCEANIA",
+    120,
+    true
+);
+
+
+// =====================================================
+// COUNTRY INFORMATION
+// =====================================================
+
+let countryData = {};
+
+
+let countryGeoJsonLayer = null;
+
+
+const COUNTRY_GEOJSON_URL =
+    "https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson";
+
+
+function formatCountryNumber(value) {
+
+    if (
+        value === null ||
+        value === undefined ||
+        value === ""
+    ) {
+
+        return "—";
+
+    }
+
+
+    const number =
+        Number(value);
+
+
+    if (
+        !Number.isFinite(number)
+    ) {
+
+        return escapeHtml(value);
+
+    }
+
+
+    return number.toLocaleString(
+        "en-US"
+    );
+
+}
+
+
+function countryIso3(properties) {
+
+    if (!properties) {
+        return null;
+    }
+
+
+    return (
+        properties.ISO_A3 ||
+        properties.iso_a3 ||
+        properties.ISO3 ||
+        properties.iso3 ||
+        properties.ADM0_A3 ||
+        properties["ISO3166-1-Alpha-3"] ||
+        null
+    );
+
+}
+
+
+function countryName(properties) {
+
+    if (!properties) {
+        return "Unknown country";
+    }
+
+
+    return (
+        properties.ADMIN ||
+        properties.NAME_EN ||
+        properties.NAME ||
+        properties.name ||
+        properties.ADMIN_NAME ||
+        "Unknown country"
+    );
+
+}
+
+
+function normalizeCountryName(value) {
+
+    return String(
+        value || ""
+    )
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\\u0300-\\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+
+}
+
+
+function findCountryData(properties) {
+
+    const iso3 =
+        countryIso3(
+            properties
+        );
+
+
+    if (
+        iso3 &&
+        countryData[iso3]
+    ) {
+
+        return countryData[iso3];
+
+    }
+
+
+    const names = [
+
+        countryName(properties),
+
+        properties &&
+        properties.NAME_LONG,
+
+        properties &&
+        properties.NAME_SORT
+
+    ];
+
+
+    for (
+        const candidate of names
+    ) {
+
+        const normalized =
+            normalizeCountryName(
+                candidate
+            );
+
+
+        if (!normalized) {
+            continue;
+        }
+
+
+        for (
+            const key of Object.keys(
+                countryData
+            )
+        ) {
+
+            const item =
+                countryData[key];
+
+
+            if (
+                normalizeCountryName(
+                    item.name
+                ) === normalized
+            ) {
+
+                // If a metadata-only record was found, merge it
+                // with a population record that has the same name.
+                if (
+                    item.population === undefined ||
+                    item.population === null
+                ) {
+
+                    for (
+                        const populationKey of Object.keys(
+                            countryData
+                        )
+                    ) {
+
+                        const populationItem =
+                            countryData[
+                                populationKey
+                            ];
+
+                        if (
+                            populationItem &&
+                            populationItem.population !== undefined &&
+                            populationItem.population !== null &&
+                            normalizeCountryName(
+                                populationItem.name
+                            ) === normalized
+                        ) {
+
+                            return {
+                                ...item,
+                                ...populationItem,
+                                name:
+                                    item.name ||
+                                    populationItem.name
+                            };
+
+                        }
+
+                    }
+
+                }
+
+                return item;
+
+            }
+
+        }
+
+    }
+
+
+    // Common naming differences between GeoJSON and GeoNames.
+    const aliases = {
+
+        "russia":
+            "Russian Federation",
+
+        "south korea":
+            "South Korea",
+
+        "north korea":
+            "North Korea",
+
+        "czechia":
+            "Czech Republic",
+
+        "ivory coast":
+            "Cote d'Ivoire",
+
+        "laos":
+            "Lao People's Democratic Republic",
+
+        "moldova":
+            "Republic of Moldova",
+
+        "vietnam":
+            "Vietnam"
+
+    };
+
+
+    for (
+        const candidate of names
+    ) {
+
+        const normalized =
+            normalizeCountryName(
+                candidate
+            );
+
+
+        const alias =
+            aliases[normalized];
+
+
+        if (!alias) {
+            continue;
+        }
+
+
+        const target =
+            normalizeCountryName(
+                alias
+            );
+
+
+        for (
+            const key of Object.keys(
+                countryData
+            )
+        ) {
+
+            const item =
+                countryData[key];
+
+
+            if (
+                normalizeCountryName(
+                    item.name
+                ) === target
+            ) {
+
+                return item;
+
+            }
+
+        }
+
+    }
+
+
+    return {};
+
+}
+
+
+function formatCompactMoney(value) {
+
+    if (
+        value === null ||
+        value === undefined ||
+        value === ""
+    ) {
+
+        return "—";
+
+    }
+
+    const number = Number(value);
+
+    if (!Number.isFinite(number)) {
+        return escapeHtml(value);
+    }
+
+    const abs = Math.abs(number);
+
+    if (abs >= 1e12) {
+        return "$" + (number / 1e12).toFixed(2) + " T";
+    }
+
+    if (abs >= 1e9) {
+        return "$" + (number / 1e9).toFixed(2) + " B";
+    }
+
+    if (abs >= 1e6) {
+        return "$" + (number / 1e6).toFixed(2) + " M";
+    }
+
+    return "$" + Math.round(number).toLocaleString("en-US");
+}
+
+
+function formatPercent(value) {
+
+    if (
+        value === null ||
+        value === undefined ||
+        value === ""
+    ) {
+        return "—";
+    }
+
+    const number = Number(value);
+
+    if (!Number.isFinite(number)) {
+        return escapeHtml(value);
+    }
+
+    return number.toFixed(1) + "%";
+}
+
+
+function renderCountryTooltip(
+    properties
+) {
+
+    const iso3 =
+        countryIso3(
+            properties
+        );
+
+
+    const name =
+        countryName(
+            properties
+        );
+
+
+    const data =
+        findCountryData(
+            properties
+        );
+
+
+    let html = `
+
+        <div class="country-info">
+
+            <div class="country-info-title">
+                🌍 ${escapeHtml(name)}
+            </div>
+
+    `;
+
+
+    const fields = [
+
+        [
+            "POPULATION",
+            data.population
+                ? formatCountryNumber(
+                    data.population
+                )
+                : "—"
+        ],
+
+        [
+            "YEAR",
+            data.year || "—"
+        ],
+
+        [
+            "CAPITAL",
+            data.capital
+                || "—"
+        ],
+
+        [
+            "REGION",
+            data.region
+                || "—"
+        ],
+
+        [
+            "AREA",
+            data.area
+                ? formatCountryNumber(
+                    data.area
+                ) + " km²"
+                : "—"
+        ],
+
+        [
+            "CURRENCY",
+            data.currency
+                || "—"
+        ],
+
+        [
+            "LANGUAGES",
+            data.languages
+                || data.language
+                || "—"
+        ],
+
+        [
+            "GDP",
+            formatCompactMoney(
+                data.gdp
+            )
+        ],
+
+        [
+            "GDP / CAPITA",
+            formatCompactMoney(
+                data.gdp_per_capita
+            )
+        ],
+
+        [
+            "GDP GROWTH",
+            formatPercent(
+                data.gdp_growth
+            )
+        ],
+
+        [
+            "PUBLIC DEBT",
+            formatCompactMoney(
+                data.public_debt
+            )
+        ],
+
+        [
+            "DEBT / GDP",
+            formatPercent(
+                data.debt_to_gdp
+            )
+        ],
+
+    ];
+
+
+    fields.forEach(
+
+        ([label, value]) => {
+
+            html += `
+
+                <div class="country-info-row">
+
+                    <span class="country-info-label">
+                        ${label}
+                    </span>
+
+                    <span class="country-info-value">
+                        ${escapeHtml(
+                            value
+                        )}
+                    </span>
+
+                </div>
+
+            `;
+
+        }
+
+    );
+
+
+    html += `
+        </div>
+    `;
+
+
+    return html;
+
+}
+
+
+function setupCountryLayer(
+    feature,
+    layer
+) {
+
+    layer.on({
+
+        mouseover:
+            event => {
+
+                const target =
+                    event.target;
+
+
+                target.setStyle({
+
+                    fillColor:
+                        "#3a4653",
+
+                    fillOpacity:
+                        0.42,
+
+                    color:
+                        "#aeb8c3",
+
+                    weight:
+                        1.2
+
+                });
+
+
+                target.bindTooltip(
+
+                    renderCountryTooltip(
+                        feature.properties
+                    ),
+
+                    {
+
+                        direction:
+                            "top",
+
+                        sticky:
+                            true,
+
+                        opacity:
+                            0.97
+
+                    }
+
+                );
+
+
+                target.openTooltip();
+
+            },
+
+
+        mouseout:
+            event => {
+
+                const target =
+                    event.target;
+
+
+                target.setStyle({
+
+                    fillColor:
+                        "#101820",
+
+                    fillOpacity:
+                        0.10,
+
+                    color:
+                        "#34414e",
+
+                    weight:
+                        0.6
+
+                });
+
+
+                target.closeTooltip();
+
+            }
+
+    });
+
+}
+
+
+async function loadCountryData() {
+
+    try {
+
+        const response =
+            await fetch(
+                apiUrl(
+                    "/api/countries"
+                )
+            );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                "Country data HTTP " +
+                response.status
+            );
+
+        }
+
+
+        const data =
+            await response.json();
+
+
+        countryData =
+            data.countries ||
+            {};
+
+
+        const countryCount =
+            Object.keys(
+                countryData
+            ).length;
+
+
+        console.log(
+            "🌍 Country data loaded:",
+            countryCount
+        );
+
+
+        // The server loads World Bank/GeoNames data in background
+        // threads. Retry shortly if the first response is still empty.
+        if (
+            countryCount === 0
+        ) {
+
+            setTimeout(
+                loadCountryData,
+                5000
+            );
+
+            return;
+
+        }
+
+
+        // Load boundaries only after population data is ready.
+        // If GeoJSON fails, the main dashboard continues to work.
+        const geoResponse =
+            await fetch(
+                COUNTRY_GEOJSON_URL
+            );
+
+
+        if (!geoResponse.ok) {
+
+            throw new Error(
+                "Country GeoJSON HTTP " +
+                geoResponse.status
+            );
+
+        }
+
+
+        const geojson =
+            await geoResponse.json();
+
+
+        if (countryGeoJsonLayer) {
+
+            map.removeLayer(
+                countryGeoJsonLayer
+            );
+
+        }
+
+
+        countryGeoJsonLayer =
+            L.geoJSON(
+
+                geojson,
+
+                {
+
+                    style: {
+
+                        fillColor:
+                            "#101820",
+
+                        fillOpacity:
+                            0.10,
+
+                        color:
+                            "#34414e",
+
+                        weight:
+                            0.6,
+
+                        opacity:
+                            0.70
+
+                    },
+
+                    onEachFeature:
+                        setupCountryLayer
+
+                }
+
+            ).addTo(map);
+
+
+        countryGeoJsonLayer
+            .bringToBack();
+
+
+        console.log(
+            "🌍 Country boundaries loaded"
+        );
+
+    }
+
+    catch (error) {
+
+        console.warn(
+            "Country information unavailable:",
+            error
+        );
+
+    }
+
+}
+
+
+// =====================================================
+// MAP MARKERS
+// =====================================================
+
+let markers = [];
+
+
+function clearMarkers() {
+
+    markers.forEach(
+
+        marker => {
+
+            map.removeLayer(marker);
+
+        }
+
+    );
+
+    markers = [];
+
+}
+
+
+// =====================================================
+// EARTHQUAKE MARKER
+// =====================================================
+
+function addMarker(event) {
+
+    if (
+
+        event.latitude === undefined ||
+
+        event.longitude === undefined
+
+    ) {
+
+        return;
+
+    }
+
+
+    let radius = 7;
+
+    let markerClass =
+        "quake-marker";
+
+
+    if (event.magnitude >= 7) {
+
+        radius = 25;
+
+        markerClass =
+            "quake-marker-critical";
+
+    }
+
+    else if (event.magnitude >= 6) {
+
+        radius = 20;
+
+        markerClass =
+            "quake-marker-strong";
+
+    }
+
+    else if (event.magnitude >= 5) {
+
+        radius = 15;
+
+    }
+
+    else if (event.magnitude >= 4) {
+
+        radius = 10;
+
+    }
+
+
+    const marker = L.circleMarker(
+
+        [
+
+            event.latitude,
+
+            event.longitude
+
+        ],
+
+        {
+
+            radius: radius,
+
+            color: "#ff3b30",
+
+            fillColor: "#ff453a",
+
+            fillOpacity: 0.88,
+
+            weight: 2,
+
+            className:
+                markerClass
+
+        }
+
+    );
+
+
+    marker.bindTooltip(
+
+        `
+
+        <div style="min-width:190px;">
+
+            <strong>
+                🌍 EARTHQUAKE
+            </strong>
+
+            <br><br>
+
+            <b>
+                ${escapeHtml(
+                    event.title
+                )}
+            </b>
+
+            <br><br>
+
+            Magnitude:
+            <strong>
+                ${event.magnitude}
+            </strong>
+
+            <br>
+
+            Depth:
+            ${event.depth} km
+
+            <br>
+
+            Time:
+            ${escapeHtml(
+                event.time
+            )}
+
+        </div>
+
+        `,
+
+        {
+
+            direction: "top",
+
+            sticky: true,
+
+            opacity: 0.96
+
+        }
+
+    );
+
+
+    marker.addTo(map);
+
+    markers.push(marker);
+
+}
+
+
+// =====================================================
+// SPACE ROCKET MARKER
+// ONLY FOR LAUNCHES TODAY
+// =====================================================
+
+function addSpaceMarker(event) {
+
+    if (
+        event.type !== "SPACE" ||
+        event.launch_today !== true
+    ) {
+
+        return;
+
+    }
+
+
+    if (
+
+        event.pad_latitude === null ||
+
+        event.pad_latitude === undefined ||
+
+        event.pad_longitude === null ||
+
+        event.pad_longitude === undefined
+
+    ) {
+
+        return;
+
+    }
+
+
+    const latitude =
+        Number(
+            event.pad_latitude
+        );
+
+
+    const longitude =
+        Number(
+            event.pad_longitude
+        );
+
+
+    if (
+        !Number.isFinite(latitude) ||
+        !Number.isFinite(longitude)
+    ) {
+
+        return;
+
+    }
+
+
+    const rocketIcon = L.divIcon({
+
+        className:
+            "rocket-marker-wrapper",
+
+        html: `
+
+            <div class="rocket-marker">
+                🚀
+            </div>
+
+        `,
+
+        iconSize:
+            [42, 42],
+
+        iconAnchor:
+            [21, 21]
+
+    });
+
+
+    const marker = L.marker(
+
+        [
+
+            latitude,
+
+            longitude
+
+        ],
+
+        {
+
+            icon:
+                rocketIcon,
+
+            zIndexOffset:
+                1000
+
+        }
+
+    );
+
+
+    const mission =
+        event.mission ||
+        event.title ||
+        "Mission TBD";
+
+
+    const rocket =
+        event.rocket ||
+        "Rocket TBD";
+
+
+    const launchSite =
+        event.location ||
+        event.pad ||
+        "Launch site TBD";
+
+
+    marker.bindTooltip(
+
+        `
+
+        <div style="
+            min-width:230px;
+            line-height:1.5;
+        ">
+
+            <div style="
+                font-size:15px;
+                font-weight:bold;
+                margin-bottom:8px;
+            ">
+
+                🚀 SPACE
+
+            </div>
+
+
+            <div style="
+                font-size:14px;
+                font-weight:bold;
+                color:#fff;
+                margin-bottom:10px;
+            ">
+
+                ${escapeHtml(
+                    event.title
+                )}
+
+            </div>
+
+
+            <div>
+
+                <strong>
+                    MISSION
+                </strong>
+
+                <br>
+
+                ${escapeHtml(
+                    mission
+                )}
+
+            </div>
+
+
+            <div style="
+                margin-top:6px;
+            ">
+
+                <strong>
+                    ROCKET
+                </strong>
+
+                <br>
+
+                ${escapeHtml(
+                    rocket
+                )}
+
+            </div>
+
+
+            <div style="
+                margin-top:6px;
+            ">
+
+                <strong>
+                    STATUS
+                </strong>
+
+                <br>
+
+                ${escapeHtml(
+                    event.status ||
+                    "Status TBD"
+                )}
+
+            </div>
+
+
+            <div style="
+                margin-top:6px;
+            ">
+
+                <strong>
+                    LAUNCH SITE
+                </strong>
+
+                <br>
+
+                ${escapeHtml(
+                    launchSite
+                )}
+
+            </div>
+
+
+            <div style="
+                margin-top:8px;
+                color:#fff;
+                font-weight:bold;
+            ">
+
+                ${formatSpaceDate(
+                    event.time
+                )}
+
+            </div>
+
+        </div>
+
+        `,
+
+        {
+
+            direction: "top",
+
+            sticky: true,
+
+            opacity: 0.97
+
+        }
+
+    );
+
+
+    marker.addTo(map);
+
+    markers.push(marker);
+
+}
+
+
+// =====================================================
+// WEATHER ALERT MARKER
+// =====================================================
+
+function addWeatherMarker(event) {
+
+    if (
+        event.type !== "WEATHER" ||
+        event.latitude === undefined ||
+        event.longitude === undefined
+    ) {
+
+        return;
+
+    }
+
+    const latitude =
+        Number(event.latitude);
+
+    const longitude =
+        Number(event.longitude);
+
+    if (
+        !Number.isFinite(latitude) ||
+        !Number.isFinite(longitude)
+    ) {
+
+        return;
+
+    }
+
+    const weatherIcon =
+        L.divIcon({
+
+            className:
+                "weather-marker-wrapper",
+
+            html: `
+                <div class="weather-marker">
+                    ⚠️
+                </div>
+            `,
+
+            iconSize:
+                [36, 36],
+
+            iconAnchor:
+                [18, 18]
+
+        });
+
+
+    const marker =
+        L.marker(
+
+            [
+                latitude,
+                longitude
+            ],
+
+            {
+                icon:
+                    weatherIcon,
+
+                zIndexOffset:
+                    900
+            }
+
+        );
+
+
+    const location =
+        event.location ||
+        event.title ||
+        "Weather alert";
+
+
+    marker.bindTooltip(
+
+        `
+
+        <div style="
+            min-width:210px;
+            line-height:1.5;
+        ">
+
+            <div style="
+                font-size:15px;
+                font-weight:bold;
+                margin-bottom:8px;
+            ">
+                ⚠️ WEATHER ALERT
+            </div>
+
+            <div style="
+                font-size:14px;
+                font-weight:bold;
+                color:#fff;
+                margin-bottom:10px;
+            ">
+                ${escapeHtml(location)}
+            </div>
+
+            <div>
+                <strong>TEMPERATURE</strong>
+                <br>
+                ${escapeHtml(event.temperature)} °C
+            </div>
+
+            <div style="margin-top:6px;">
+                <strong>WIND</strong>
+                <br>
+                ${escapeHtml(event.wind)} km/h
+            </div>
+
+            <div style="margin-top:6px;">
+                <strong>PRECIPITATION</strong>
+                <br>
+                ${escapeHtml(event.precipitation)} mm
+            </div>
+
+            <div style="
+                margin-top:8px;
+                color:#ff9500;
+                font-weight:bold;
+            ">
+                SCORE ${escapeHtml(event.score)}
+            </div>
+
+            <div style="
+                margin-top:6px;
+                color:#59636e;
+                font-size:10px;
+            ">
+                ${escapeHtml(event.time)}
+            </div>
+
+        </div>
+
+        `,
+
+        {
+            direction: "top",
+            sticky: true,
+            opacity: 0.97
+        }
+
+    );
+
+
+    marker.addTo(map);
+
+    markers.push(marker);
+
+}
+
+
+// =====================================================
+// SPACE DATE
+// =====================================================
+
+function formatSpaceDate(value) {
+
+    if (!value) {
+
+        return "DATE TBD";
+
+    }
+
+
+    const date =
+        new Date(value);
+
+
+    if (
+        isNaN(
+            date.getTime()
+        )
+    ) {
+
+        return "DATE TBD";
+
+    }
+
+
+    const months = [
+
+        "JAN",
+        "FEB",
+        "MAR",
+        "APR",
+        "MAY",
+        "JUN",
+        "JUL",
+        "AUG",
+        "SEP",
+        "OCT",
+        "NOV",
+        "DEC"
+
+    ];
+
+
+    const day =
+        String(
+            date.getUTCDate()
+        ).padStart(
+            2,
+            "0"
+        );
+
+
+    const month =
+        months[
+            date.getUTCMonth()
+        ];
+
+
+    const year =
+        date.getUTCFullYear();
+
+
+    const hours =
+        String(
+            date.getUTCHours()
+        ).padStart(
+            2,
+            "0"
+        );
+
+
+    const minutes =
+        String(
+            date.getUTCMinutes()
+        ).padStart(
+            2,
+            "0"
+        );
+
+
+    return (
+
+        `${day} ${month} ${year}` +
+
+        ` · ${hours}:${minutes} UTC`
+
+    );
+
+}
+
+
+// =====================================================
+// ESCAPE HTML
+// =====================================================
+
+function escapeHtml(value) {
+
+    if (
+        value === null ||
+        value === undefined
+    ) {
+
+        return "";
+
+    }
+
+
+    return String(value)
+
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+
+        .replace(
+            /</g,
+            "&lt;"
+        )
+
+        .replace(
+            />/g,
+            "&gt;"
+        )
+
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+
+        .replace(
+            /'/g,
+            "&#039;"
+        );
+
+}
+
+
+// =====================================================
+// SPACE DETAILS
+// =====================================================
+
+function renderSpaceDetails(event) {
+
+    let html = "";
+
+
+    html += `
+
+        <div class="space-field">
+
+            <div class="space-field-label">
+                DATE
+            </div>
+
+            <div class="space-date">
+
+                ${formatSpaceDate(
+                    event.time
+                )}
+
+            </div>
+
+        </div>
+
+    `;
+
+
+    if (event.status) {
+
+        html += `
+
+            <div class="space-field">
+
+                <div class="space-field-label">
+                    STATUS
+                </div>
+
+                <div class="space-status">
+
+                    ${escapeHtml(
+                        event.status
+                    )}
+
+                </div>
+
+            </div>
+
+        `;
+
+    }
+
+
+    if (event.launch_today) {
+
+        html += `
+
+            <div class="space-field">
+
+                <div class="space-field-label">
+                    TODAY
+                </div>
+
+                <div class="space-status">
+
+                    🚀 LAUNCH TODAY
+
+                </div>
+
+            </div>
+
+        `;
+
+    }
+
+
+    if (event.mission) {
+
+        html += `
+
+            <div class="space-field">
+
+                <div class="space-field-label">
+                    MISSION
+                </div>
+
+                <div class="space-field-value">
+
+                    ${escapeHtml(
+                        event.mission
+                    )}
+
+                </div>
+
+            </div>
+
+        `;
+
+    }
+
+
+    if (event.rocket) {
+
+        html += `
+
+            <div class="space-field">
+
+                <div class="space-field-label">
+                    ROCKET
+                </div>
+
+                <div class="space-field-value">
+
+                    ${escapeHtml(
+                        event.rocket
+                    )}
+
+                </div>
+
+            </div>
+
+        `;
+
+    }
+
+
+    if (event.provider) {
+
+        html += `
+
+            <div class="space-field">
+
+                <div class="space-field-label">
+                    PROVIDER
+                </div>
+
+                <div class="space-field-value">
+
+                    ${escapeHtml(
+                        event.provider
+                    )}
+
+                </div>
+
+            </div>
+
+        `;
+
+    }
+
+
+    if (event.pad) {
+
+        html += `
+
+            <div class="space-field">
+
+                <div class="space-field-label">
+                    LAUNCH PAD
+                </div>
+
+                <div class="space-field-value">
+
+                    ${escapeHtml(
+                        event.pad
+                    )}
+
+                </div>
+
+            </div>
+
+        `;
+
+    }
+
+
+    if (event.location) {
+
+        html += `
+
+            <div class="space-field">
+
+                <div class="space-field-label">
+                    LOCATION
+                </div>
+
+                <div class="space-field-value">
+
+                    ${escapeHtml(
+                        event.location
+                    )}
+
+                </div>
+
+            </div>
+
+        `;
+
+    }
+
+
+    if (event.window_start) {
+
+        html += `
+
+            <div class="space-field">
+
+                <div class="space-field-label">
+                    LAUNCH WINDOW
+                </div>
+
+                <div class="space-field-value">
+
+                    ${formatSpaceDate(
+                        event.window_start
+                    )}
+
+                    ${
+                        event.window_end
+                            ? " – " +
+                              formatSpaceDate(
+                                  event.window_end
+                              )
+                            : ""
+                    }
+
+                </div>
+
+            </div>
+
+        `;
+
+    }
+
+
+    if (event.description) {
+
+        html += `
+
+            <div class="space-field">
+
+                <div class="space-field-label">
+                    MISSION INFO
+                </div>
+
+                <div class="space-description">
+
+                    ${escapeHtml(
+                        event.description
+                    )}
+
+                </div>
+
+            </div>
+
+        `;
+
+    }
+
+
+    html += `
+
+        <div class="space-field">
+
+            <div class="space-field-label">
+                GLOBAL SIGNAL SCORE
+            </div>
+
+            <div class="space-field-value">
+
+                ${event.score ?? "-"}
+
+            </div>
+
+        </div>
+
+    `;
+
+
+    return html;
+
+}
+
+
+// =====================================================
+// TOP EVENT
+// =====================================================
+
+function renderTopEvent(events) {
+
+    const container =
+        document.getElementById(
+            "top-event"
+        );
+
+
+    if (!events.length) {
+
+        container.className =
+            "top-event";
+
+        container.innerHTML = `
+
+            <div class="waiting">
+                Waiting for events...
+            </div>
+
+        `;
+
+        return;
+
+    }
+
+
+    const sorted =
+
+        [...events].sort(
+
+            (a, b) =>
+
+                (b.score || 0) -
+                (a.score || 0)
+
+        );
+
+
+    const event =
+        sorted[0];
+
+
+    container.className =
+
+        "top-event " +
+
+        (
+            event.level || ""
+        ).toLowerCase();
+
+
+    let details = "";
+
+
+    if (
+        event.type ===
+        "EARTHQUAKE"
+    ) {
+
+        details = `
+
+            <div class="space-field">
+
+                <div class="space-field-label">
+                    LOCATION
+                </div>
+
+                <div class="space-field-value">
+
+                    ${escapeHtml(
+                        event.title
+                    )}
+
+                </div>
+
+            </div>
+
+            <div class="space-field">
+
+                Magnitude:
+                <strong>
+                    ${event.magnitude}
+                </strong>
+
+                · Depth:
+                ${event.depth} km
+
+            </div>
+
+            <div class="space-field">
+
+                Time:
+                ${escapeHtml(
+                    event.time
+                )}
+
+            </div>
+
+        `;
+
+    }
+
+
+    else if (
+        event.type ===
+        "SPACE"
+    ) {
+
+        details =
+            renderSpaceDetails(
+                event
+            );
+
+    }
+
+
+    else if (
+        event.type ===
+        "WEATHER"
+    ) {
+
+        const weatherLocation =
+
+            event.location ||
+
+            (
+                event.title || ""
+            ).replace(
+                "Extreme weather - ",
+                ""
+            );
+
+
+        details = `
+
+            <div class="space-field">
+
+                <div class="space-field-label">
+                    LOCATION
+                </div>
+
+                <div class="space-field-value">
+
+                    ${escapeHtml(
+                        weatherLocation
+                    )}
+
+                </div>
+
+            </div>
+
+            <div class="space-field">
+
+                ${event.temperature} °C
+
+                · Wind:
+                ${event.wind} km/h
+
+                <br>
+
+                Precipitation:
+                ${event.precipitation} mm
+
+            </div>
+
+        `;
+
+    }
+
+
+    else if (
+        event.type ===
+        "NEWS"
+    ) {
+
+        details = `
+
+            <div class="space-field">
+
+                <div class="space-field-value" style="
+                    color:#59636e;
+                    font-size:11px;
+                    letter-spacing:1px;
+                    margin-bottom:10px;
+                ">
+
+                    📰 ${escapeHtml(
+                        event.time || ""
+                    )}
+
+                </div>
+
+                <div style="
+                    color:#ffffff;
+                    font-size:15px;
+                    font-weight:bold;
+                    margin-bottom:5px;
+                ">
+
+                    ${escapeHtml(
+                        event.author ||
+                        event.source ||
+                        "News"
+                    )}
+
+                </div>
+
+                <div style="
+                    color:#8d98a5;
+                    font-size:10px;
+                    font-weight:bold;
+                    letter-spacing:2px;
+                    margin-bottom:14px;
+                ">
+
+                    ${escapeHtml(
+                        event.category ||
+                        "NEWS"
+                    )}
+
+                </div>
+
+                <div style="
+                    color:#d8dee5;
+                    font-size:13px;
+                    line-height:1.55;
+                ">
+
+                    ${escapeHtml(
+                        event.title
+                    )}
+
+                </div>
+
+            </div>
+
+        `;
+
+    }
+
+
+    container.innerHTML = `
+
+        <div class="top-event-type">
+
+            ${event.emoji || ""}
+
+            ${escapeHtml(
+                event.type
+            )}
+
+        </div>
+
+
+        <div class="top-event-name">
+
+            ${escapeHtml(
+                event.title
+            )}
+
+        </div>
+
+
+        <div class="top-event-details">
+
+            ${details}
+
+        </div>
+
+    `;
+
+}
+
+
+// =====================================================
+// RECENT EVENTS
+// =====================================================
+
+function renderEvents(events) {
+
+    const container =
+        document.getElementById(
+            "events"
+        );
+
+
+    container.innerHTML = "";
+
+
+    if (!events.length) {
+
+        container.innerHTML = `
+
+            <div class="waiting">
+                Waiting for events...
+            </div>
+
+        `;
+
+        return;
+
+    }
+
+
+    events.forEach(
+
+        event => {
+
+            const element =
+                document.createElement(
+                    "div"
+                );
+
+
+            element.className =
+                "event";
+
+
+            let details = "";
+
+
+            if (
+                event.type ===
+                "EARTHQUAKE"
+            ) {
+
+                details = `
+
+                    <div class="event-location">
+
+                        ${escapeHtml(
+                            event.title
+                        )}
+
+                    </div>
+
+                    Magnitude:
+                    <strong>
+                        ${event.magnitude}
+                    </strong>
+
+                    · Depth:
+                    ${event.depth} km
+
+                `;
+
+            }
+
+
+            else if (
+                event.type ===
+                "SPACE"
+            ) {
+
+                details = `
+
+                    <div class="event-location">
+
+                        ${escapeHtml(
+                            event.title
+                        )}
+
+                    </div>
+
+                    ${
+                        event.launch_today
+                            ? "🚀 LAUNCH TODAY"
+                            : escapeHtml(
+                                event.status ||
+                                "Status unavailable"
+                            )
+                    }
+
+                    <br>
+
+                    ${formatSpaceDate(
+                        event.time
+                    )}
+
+                    ${
+                        event.location
+                            ? `
+                                <br>
+                                ${escapeHtml(
+                                    event.location
+                                )}
+                              `
+                            : ""
+                    }
+
+                `;
+
+            }
+
+
+            else if (
+                event.type ===
+                "WEATHER"
+            ) {
+
+                const weatherLocation =
+
+                    event.location ||
+
+                    (
+                        event.title || ""
+                    ).replace(
+                        "Extreme weather - ",
+                        ""
+                    );
+
+
+                details = `
+
+                    <div class="event-location">
+
+                        ${escapeHtml(
+                            weatherLocation
+                        )}
+
+                    </div>
+
+                    ${event.temperature} °C
+
+                    · Wind:
+                    ${event.wind} km/h
+
+                    <br>
+
+                    Precipitation:
+                    ${event.precipitation} mm
+
+                `;
+
+            }
+
+
+            else if (
+                event.type ===
+                "NEWS"
+            ) {
+
+                details = `
+
+                    <div class="event-location">
+
+                        ${escapeHtml(
+                            event.author ||
+                            event.source ||
+                            "News"
+                        )}
+
+                    </div>
+
+                    <span style="
+                        color:#59636e;
+                        font-size:10px;
+                        letter-spacing:1.5px;
+                    ">
+
+                        ${escapeHtml(
+                            event.category ||
+                            "NEWS"
+                        )}
+
+                    </span>
+
+                    <br>
+
+                    ${escapeHtml(
+                        event.title
+                    )}
+
+                `;
+
+            }
+
+
+            element.innerHTML = `
+
+                <div class="event-time">
+
+                    ${escapeHtml(
+                        event.time
+                    )}
+
+                </div>
+
+
+                <div class="event-name">
+
+                    ${event.emoji || ""}
+
+                    ${escapeHtml(
+                        event.type
+                    )}
+
+                </div>
+
+
+                <div class="event-details">
+
+                    ${details}
+
+                </div>
+
+            `;
+
+
+            container.appendChild(
+                element
+            );
+
+        }
+
+    );
+
+}
+
+
+// =====================================================
+// NEWS TICKER
+// =====================================================
+
+function renderNewsTicker(events) {
+
+    const track =
+        document.getElementById(
+            "news-track"
+        );
+
+
+    const newsEvents =
+        events.filter(
+
+            event =>
+                event.type ===
+                "NEWS"
+
+        );
+
+
+    if (!newsEvents.length) {
+
+        track.innerHTML = `
+
+            <div class="news-item">
+
+                <strong>
+                    NEWS
+                </strong>
+
+                Worldwide Events
+
+            </div>
+
+        `;
+
+        return;
+
+    }
+
+
+    track.innerHTML = "";
+
+
+    newsEvents
+        .slice(0, 8)
+        .forEach(
+
+            (event, index) => {
+
+                const item =
+                    document.createElement(
+                        "div"
+                    );
+
+
+                item.className =
+                    "news-item";
+
+
+                const category =
+                    event.category ||
+                    "NEWS";
+
+
+                item.innerHTML = `
+
+                    <strong>
+
+                        ${event.emoji || "📰"}
+
+                        ${escapeHtml(
+                            category
+                        )}
+
+                    </strong>
+
+                    ${escapeHtml(
+                        event.title
+                    )}
+
+                    <span
+                        style="
+                            margin-left:10px;
+                            color:#59636e;
+                        "
+                    >
+                        ·
+                        ${escapeHtml(
+                            event.source
+                        )}
+                    </span>
+
+                `;
+
+
+                if (event.url) {
+
+                    item.style.cursor =
+                        "pointer";
+
+
+                    item.title =
+                        "Open source";
+
+
+                    item.addEventListener(
+                        "click",
+                        () => {
+
+                            window.open(
+                                event.url,
+                                "_blank",
+                                "noopener,noreferrer"
+                            );
+
+                        }
+                    );
+
+                }
+
+
+                track.appendChild(
+                    item
+                );
+
+
+                if (
+                    index <
+                    newsEvents.length - 1
+                ) {
+
+                    const separator =
+                        document.createElement(
+                            "div"
+                        );
+
+
+                    separator.className =
+                        "news-separator";
+
+
+                    separator.textContent =
+                        "•";
+
+
+                    track.appendChild(
+                        separator
+                    );
+
+                }
+
+            }
+
+        );
+
+}
+
+
+// =====================================================
+// NEW EARTHQUAKE DETECTION
+// =====================================================
+
+let knownEarthquakes =
+    new Set();
+
+
+let firstEventLoad =
+    true;
+
+
+function handleEarthquakeActivity(
+    events
+) {
+
+    const earthquakes =
+        events.filter(
+
+            event =>
+                event.type ===
+                "EARTHQUAKE"
+
+        );
+
+
+    if (firstEventLoad) {
+
+        earthquakes.forEach(
+
+            event => {
+
+                knownEarthquakes.add(
+                    event.id
+                );
+
+            }
+
+        );
+
+        firstEventLoad = false;
+
+        return;
+
+    }
+
+
+    for (
+        const event of earthquakes
+    ) {
+
+        if (
+            knownEarthquakes.has(
+                event.id
+            )
+        ) {
+
+            continue;
+
+        }
+
+
+        knownEarthquakes.add(
+            event.id
+        );
+
+
+        if (
+            event.magnitude < 6
+        ) {
+
+            continue;
+
+        }
+
+
+        const targetZoom =
+            event.magnitude >= 7
+                ? 5
+                : 4;
+
+
+        map.flyTo(
+
+            [
+
+                event.latitude,
+
+                event.longitude
+
+            ],
+
+            targetZoom,
+
+            {
+
+                duration: 2
+
+            }
+
+        );
+
+
+        setTimeout(
+
+            () => {
+
+                map.flyTo(
+
+                    GLOBAL_VIEW.center,
+
+                    GLOBAL_VIEW.zoom,
+
+                    {
+
+                        duration: 2
+
+                    }
+
+                );
+
+            },
+
+            8000
+
+        );
+
+
+        break;
+
+    }
+
+}
+
+
+// =====================================================
+// WORLD POPULATION
+// =====================================================
+
+let worldPopulation = null;
+
+let worldPopulationYear = null;
+
+let worldPopulationGrowthPerYear = 0;
+
+
+function formatWorldPopulation(value) {
+
+    if (
+        value === null ||
+        value === undefined ||
+        !Number.isFinite(
+            Number(value)
+        )
+    ) {
+
+        return "—";
+
+    }
+
+
+    return Math.round(
+        Number(value)
+    ).toLocaleString(
+        "en-US"
+    );
+
+}
+
+
+function updateWorldPopulationDisplay() {
+
+    const element =
+        document.getElementById(
+            "world-population"
+        );
+
+
+    if (!element) {
+        return;
+    }
+
+
+    if (
+        worldPopulation === null
+    ) {
+
+        element.textContent =
+            "—";
+
+        return;
+
+    }
+
+
+    // The World Bank value is the reference population.
+    // We estimate the current live counter between updates
+    // using the annual growth value supplied by the server.
+    let population =
+        worldPopulation;
+
+
+    if (
+        worldPopulationYear &&
+        worldPopulationGrowthPerYear
+    ) {
+
+        const now =
+            new Date();
+
+
+        const start =
+            new Date(
+                Date.UTC(
+                    worldPopulationYear,
+                    0,
+                    1
+                )
+            );
+
+
+        const elapsedYears =
+            (
+                now.getTime() -
+                start.getTime()
+            ) /
+            (
+                365.2425 *
+                24 *
+                60 *
+                60 *
+                1000
+            );
+
+
+        population +=
+            worldPopulationGrowthPerYear *
+            elapsedYears;
+
+    }
+
+
+    element.textContent =
+        formatWorldPopulation(
+            population
+        );
+
+}
+
+
+async function loadWorldPopulation() {
+
+    try {
+
+        const response =
+            await fetch(
+                apiUrl(
+                    "/api/population"
+                )
+            );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                "Population HTTP " +
+                response.status
+            );
+
+        }
+
+
+        const data =
+            await response.json();
+
+
+        worldPopulation =
+            Number(
+                data.population
+            );
+
+
+        worldPopulationYear =
+            Number(
+                data.year
+            );
+
+
+        worldPopulationGrowthPerYear =
+            Number(
+                data.growth_per_year || 0
+            );
+
+
+        updateWorldPopulationDisplay();
+
+
+        console.log(
+            "🌍 World population:",
+            formatWorldPopulation(
+                worldPopulation
+            )
+        );
+
+    }
+
+    catch (error) {
+
+        console.warn(
+            "World population unavailable:",
+            error
+        );
+
+    }
+
+}
+
+
+// =====================================================
+// UTC CLOCK
+// =====================================================
+
+function updateUTCClock() {
+
+    const now =
+        new Date();
+
+
+    const hours =
+        String(
+            now.getUTCHours()
+        ).padStart(2, "0");
+
+
+    const minutes =
+        String(
+            now.getUTCMinutes()
+        ).padStart(2, "0");
+
+
+    const seconds =
+        String(
+            now.getUTCSeconds()
+        ).padStart(2, "0");
+
+
+    document.getElementById(
+        "utc-time"
+    ).textContent =
+
+        `${hours}:${minutes}:${seconds}`;
+
+}
+
+
+updateUTCClock();
+
+updateWorldPopulationDisplay();
+
+
+setInterval(
+
+    updateUTCClock,
+
+    1000
+
+);
+
+
+setInterval(
+
+    updateWorldPopulationDisplay,
+
+    1000
+
+);
+
+
+// =====================================================
+// API BASE URL
+// =====================================================
+
+// Normally the page is served by Flask and these are relative URLs.
+// If the user opens index.html directly with file://, Chrome cannot
+// resolve /api/events against Flask. In that case use localhost:5000.
+const API_BASE =
+    window.location.protocol === "file:"
+        ? "http://127.0.0.1:5000"
+        : "";
+
+
+function apiUrl(path) {
+
+    return API_BASE + path;
+
+}
+
+
+function setServerStatus(
+    online,
+    message = ""
+) {
+
+    const status =
+        document.getElementById(
+            "server-status"
+        );
+
+    if (!status) {
+        return;
+    }
+
+
+    if (online) {
+
+        status.textContent =
+            "● SERVER ONLINE";
+
+        status.style.color =
+            "#34c759";
+
+    }
+
+    else {
+
+        status.textContent =
+            "● SERVER OFFLINE";
+
+        status.style.color =
+            "#ff3b30";
+
+        if (message) {
+
+            status.title =
+                message;
+
+        }
+
+    }
+
+}
+
+
+// Load world population independently from event refreshes.
+loadWorldPopulation();
+
+
+// Load country data and boundaries in background.
+// This never blocks the events API.
+loadCountryData();
+
+setInterval(
+    loadCountryData,
+    60000
+);
+
+
+// =====================================================
+// LOAD EVENTS
+// =====================================================
+
+async function loadEvents() {
+
+    try {
+
+        const response =
+            await fetch(
+                apiUrl("/api/events")
+            );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                "HTTP " + response.status
+            );
+
+        }
+
+
+        const events =
+            await response.json();
+
+
+        setServerStatus(
+            true
+        );
+
+
+        renderTopEvent(
+            events
+        );
+
+
+        renderEvents(
+            events
+        );
+
+
+        renderNewsTicker(
+            events
+        );
+
+
+        clearMarkers();
+
+
+        events.forEach(
+
+            event => {
+
+                if (
+                    event.type ===
+                    "EARTHQUAKE"
+                ) {
+
+                    addMarker(
+                        event
+                    );
+
+                }
+
+
+                if (
+                    event.type ===
+                    "WEATHER"
+                ) {
+
+                    addWeatherMarker(
+                        event
+                    );
+
+                }
+
+
+                if (
+                    event.type ===
+                    "SPACE" &&
+
+                    event.launch_today ===
+                    true &&
+
+                    event.pad_latitude !==
+                    null &&
+
+                    event.pad_latitude !==
+                    undefined &&
+
+                    event.pad_longitude !==
+                    null &&
+
+                    event.pad_longitude !==
+                    undefined
+
+                ) {
+
+                    addSpaceMarker(
+                        event
+                    );
+
+                }
+
+            }
+
+        );
+
+
+        handleEarthquakeActivity(
+            events
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Event loading error:",
+            error
+        );
+
+
+        setServerStatus(
+            false,
+            error.message
+        );
+
+    }
+
+}
+
+
+// =====================================================
+// START
+// =====================================================
+
+loadEvents();
+
+
+setInterval(
+
+    loadEvents,
+
+    5000
+
+);
+
+
+</script>
+
+
+</body>
+
+</html>
