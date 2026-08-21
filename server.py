@@ -1921,13 +1921,217 @@ def load_space_events_once():
     # Space: ogni 30 minuti
 
 
+def load_space_events():
+
+    try:
+
+        response = requests.get(
+            SPACE_URL,
+            params={"limit": 10, "mode": "normal"},
+            timeout=15
+        )
+
+        if response.status_code == 429:
+            print("⚠️ Space API rate limit (429)")
+            return
+
+        response.raise_for_status()
+        data = response.json()
+
+        loaded = 0
+
+        for launch in data.get("results", []):
+
+            launch_id = "SPACE-" + str(launch.get("id"))
+
+            if launch_id in seen:
+                continue
+
+            name = launch.get("name") or "Unnamed launch"
+            net_string = launch.get("net")
+
+            status_data = launch.get("status") or {}
+            status = (
+                status_data.get("name")
+                or "Status unavailable"
+            )
+
+            mission = launch.get("mission") or {}
+
+            mission_name = (
+                mission.get("name")
+                if isinstance(mission, dict)
+                else None
+            )
+
+            mission_description = (
+                mission.get("description")
+                if isinstance(mission, dict)
+                else None
+            )
+
+            pad = launch.get("pad") or {}
+
+            pad_name = (
+                pad.get("name")
+                if isinstance(pad, dict)
+                else None
+            )
+
+            pad_latitude = (
+                pad.get("latitude")
+                if isinstance(pad, dict)
+                else None
+            )
+
+            pad_longitude = (
+                pad.get("longitude")
+                if isinstance(pad, dict)
+                else None
+            )
+
+            pad_location = (
+                pad.get("location") or {}
+                if isinstance(pad, dict)
+                else {}
+            )
+
+            location_name = (
+                pad_location.get("name")
+                if isinstance(pad_location, dict)
+                else None
+            )
+
+            rocket = launch.get("rocket") or {}
+
+            rocket_configuration = (
+                rocket.get("configuration") or {}
+                if isinstance(rocket, dict)
+                else {}
+            )
+
+            rocket_name = (
+                rocket_configuration.get("full_name")
+                or rocket_configuration.get("name")
+                if isinstance(rocket_configuration, dict)
+                else None
+            )
+
+            provider = (
+                launch.get("launch_service_provider")
+                or {}
+            )
+
+            provider_name = (
+                provider.get("name")
+                if isinstance(provider, dict)
+                else None
+            )
+
+            launch_time = parse_iso_datetime(net_string)
+
+            launch_today = False
+
+            if launch_time:
+
+                now = datetime.now(timezone.utc)
+
+                launch_today = (
+                    launch_time.date() == now.date()
+                    and launch_time > now
+                )
+
+            score = 30
+
+            if "in flight" in status.lower():
+
+                score = 90
+
+            elif launch_time:
+
+                now = datetime.now(timezone.utc)
+
+                seconds_until = (
+                    launch_time - now
+                ).total_seconds()
+
+                if 0 < seconds_until <= 3600:
+                    score = 70
+
+                elif 0 < seconds_until <= 86400:
+                    score = 50
+
+            if launch_today and score < 50:
+                score = 50
+
+            if score >= 90:
+                level = "CRITICAL"
+                emoji = "🚨"
+
+            elif score >= 70:
+                level = "HIGH"
+                emoji = "🔥"
+
+            elif launch_today:
+                level = "HIGH"
+                emoji = "🚀"
+
+            else:
+                level = "NORMAL"
+                emoji = "🚀"
+
+            event = {
+                "id": launch_id,
+                "time": net_string,
+                "type": "SPACE",
+                "title": name,
+                "status": status,
+                "mission": mission_name,
+                "description": mission_description,
+                "pad": pad_name,
+                "location": location_name,
+                "pad_latitude": pad_latitude,
+                "pad_longitude": pad_longitude,
+                "rocket": rocket_name,
+                "provider": provider_name,
+                "launch_today": launch_today,
+                "window_start": launch.get("window_start"),
+                "window_end": launch.get("window_end"),
+                "score": score,
+                "level": level,
+                "emoji": emoji
+            }
+
+            add_event(event)
+            seen.add(launch_id)
+            loaded += 1
+
+            if launch_today:
+                print(
+                    f"🚀 SPACE TODAY: {name} | "
+                    f"{location_name or 'Location TBD'} | "
+                    f"{net_string}"
+                )
+            else:
+                print(f"{emoji} SPACE: {name}")
+
+        print(f"🚀 Loaded space events: {loaded}")
+
+    except Exception as error:
+
+        print(
+            "Errore caricamento spazio:",
+            error
+        )
+
+
 def space_monitor():
 
-    print('🚀 Space monitor avviato')
+    print("🚀 Space monitor avviato")
 
     while True:
 
-        load_space_events_once()
+        load_space_events()
 
         time.sleep(1800)
 
@@ -2245,13 +2449,17 @@ def load_weather_events_once():
 
 
 
-def weather_monitor():
+def weather_monitor(once=False):
 
     print('🌦️ Weather monitor avviato')
 
     while True:
 
         load_weather_events_once()
+
+        if once:
+
+            return
 
         time.sleep(600)
 
@@ -2774,13 +2982,17 @@ def load_news_events_once():
 
 
 
-def news_monitor():
+def news_monitor(once=False):
 
     print('📰 News monitor avviato')
 
     while True:
 
         load_news_events_once()
+
+        if once:
+
+            return
 
         time.sleep(420)
 
@@ -3244,6 +3456,25 @@ except Exception as error:
     print("❌ Initial news bootstrap:", repr(error))
 
 # Start the periodic/background monitors after the initial datasets exist.
+
+print("🚀 Initial event bootstrap...")
+
+try:
+    load_space_events()
+except Exception as error:
+    print("❌ Initial space bootstrap:", repr(error))
+
+try:
+    weather_monitor(once=True)
+except Exception as error:
+    print("❌ Initial weather bootstrap:", repr(error))
+
+try:
+    news_monitor(once=True)
+except Exception as error:
+    print("❌ Initial news bootstrap:", repr(error))
+
+
 start_background_monitors()
 
 
