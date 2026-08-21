@@ -1491,7 +1491,7 @@ def load_space_events_once():
 
             time.sleep(1800)
 
-            continue
+            return
 
         response.raise_for_status()
 
@@ -1508,7 +1508,7 @@ def load_space_events_once():
             )
 
             if launch_id in seen:
-                continue
+                return
 
 
             # -----------------------------------------
@@ -1945,7 +1945,7 @@ def load_space_events():
             launch_id = "SPACE-" + str(launch.get("id"))
 
             if launch_id in seen:
-                continue
+                return
 
             name = launch.get("name") or "Unnamed launch"
             net_string = launch.get("net")
@@ -2764,7 +2764,7 @@ def load_news_events_once():
 
             time.sleep(1800)
 
-            continue
+            return
 
         if response.status_code == 401:
 
@@ -2775,7 +2775,7 @@ def load_news_events_once():
 
             time.sleep(1800)
 
-            continue
+            return
 
         response.raise_for_status()
 
@@ -2803,13 +2803,13 @@ def load_news_events_once():
             ).strip()
 
             if not title or not url:
-                continue
+                return
 
             if not is_relevant_news(
                 title
             ):
 
-                continue
+                return
 
             news_id = (
                 "NEWS-" +
@@ -2817,7 +2817,7 @@ def load_news_events_once():
             )
 
             if news_id in seen:
-                continue
+                return
 
             score = news_score(
                 title
