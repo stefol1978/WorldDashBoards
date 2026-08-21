@@ -2837,6 +2837,9 @@ def get_population():
         "previous_year":
             world_population["previous_year"],
 
+        "growth_per_year":
+            world_population["growth_per_year"],
+
         "updated":
             world_population["updated"]
 
